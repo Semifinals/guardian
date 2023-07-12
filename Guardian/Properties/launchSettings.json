@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "Guardian": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7236"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "httpPort": 34564,
+      "useSSL": false
+    }
+  }
+}
