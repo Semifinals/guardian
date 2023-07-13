@@ -1,9 +1,121 @@
-﻿namespace Semifinals.Guardian.Repositories;
+﻿using Semifinals.Guardian.Models;
+
+namespace Semifinals.Guardian.Repositories;
 
 public interface IIdentityRepository
 {
+    /// <summary>
+    /// Create a new identity.
+    /// </summary>
+    /// <returns>The newly created identity</returns>
+    Task<Identity> CreateAsync();
+
+    /// <summary>
+    /// Get an identity by its ID.
+    /// </summary>
+    /// <param name="id">The ID to fetch by</param>
+    /// <returns>The requested identity</returns>
+    Task<Identity?> GetByIdAsync(string id);
+
+    /// <summary>
+    /// Update an identity by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the identity to update</param>
+    /// <param name="operations">The patch operations to perform</param>
+    /// <returns>The updated identity</returns>
+    Task<Identity?> UpdateByIdAsync(
+        string id,
+        IEnumerable<PatchOperation> operations);
+
+    /// <summary>
+    /// Delete an identity by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the identity to delete</param>
+    /// <returns>A task which will resolve once the identity is deleted</returns>
+    Task DeleteByIdAsync(string id);
 }
 
 public class IdentityRepository : IIdentityRepository
-{
+{    
+    private readonly ILogger _logger;
+    private readonly CosmosClient _cosmosClient;
+    
+    private Container Container => _cosmosClient.GetContainer(
+        "identity-db",
+        "identities");
+
+    public IdentityRepository(ILogger logger, CosmosClient cosmosClient)
+    {
+        _logger = logger;
+        _cosmosClient = cosmosClient;
+    }
+
+    public async Task<Identity> CreateAsync()
+    {
+        string id = ShortId.Generate(new(useSpecialCharacters: false, length: 8));
+        
+        Identity identity = await Container.CreateItemAsync<Identity>(new(id), new(id));
+        
+        _logger.LogInformation("Created new identity with ID {id}", id);
+
+        return identity;
+    }
+
+    public async Task<Identity?> GetByIdAsync(string id)
+    {
+        Identity identity;
+        try
+        {
+            identity = await Container.ReadItemAsync<Identity>(id, new(id));
+        }
+        catch (CosmosException)
+        {
+            _logger.LogInformation(
+                "Unsuccessfully attempted to get the identity with ID {id}",
+                id);
+
+            return null;
+        }
+        
+        _logger.LogInformation("Fetched the identity with ID {id}", id);
+
+        return identity;
+    }
+
+    public async Task<Identity?> UpdateByIdAsync(
+        string id,
+        IEnumerable<PatchOperation> operations)
+    {
+        Identity identity;
+        try
+        {
+            identity = await Container.PatchItemAsync<Identity>(
+                id,
+                new(id),
+                (IReadOnlyList<PatchOperation>)operations);
+        }
+        catch (CosmosException)
+        {
+            _logger.LogInformation(
+                "Unsuccessfully attempted to update the identity with ID {id}",
+                id,
+                string.Join(", ", operations.Select(o => o.Path)));
+            
+            return null;
+        }
+
+        _logger.LogInformation(
+            "Updated the identity with ID {id} changing the following properties: {properties}",
+            id,
+            string.Join(", ", operations.Select(o => o.Path)));
+
+        return identity;
+    }
+
+    public async Task DeleteByIdAsync(string id)
+    {
+        await Container.DeleteItemAsync<Identity>(id, new(id));
+
+        _logger.LogInformation("Deleted the identity with ID {id}", id);
+    }
 }
