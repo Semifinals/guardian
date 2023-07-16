@@ -5,10 +5,11 @@ namespace Semifinals.Guardian.Repositories;
 public interface IIdentityRepository
 {
     /// <summary>
-    /// Create a new identity.
+    /// Create a new identity. Provide the ID if the indentity is being created
+    /// for a new first-party account.
     /// </summary>
     /// <returns>The newly created identity</returns>
-    Task<Identity> CreateAsync();
+    Task<Identity> CreateAsync(string? id = null);
 
     /// <summary>
     /// Get an identity by its ID.
@@ -50,14 +51,14 @@ public class IdentityRepository : IIdentityRepository
         _cosmosClient = cosmosClient;
     }
 
-    public async Task<Identity> CreateAsync()
+    public async Task<Identity> CreateAsync(string? id = null)
     {
-        string id = ShortId.Generate(new(useSpecialCharacters: false, length: 8));
+        id ??= ShortId.Generate(new(useSpecialCharacters: false, length: 8));
         
         Identity identity = await Container.CreateItemAsync<Identity>(new(id), new(id));
         
         _logger.LogInformation("Created new identity with ID {id}", id);
-
+        
         return identity;
     }
 
@@ -97,7 +98,7 @@ public class IdentityRepository : IIdentityRepository
         catch (CosmosException)
         {
             _logger.LogInformation(
-                "Unsuccessfully attempted to update the identity with ID {id}",
+                "Unsuccessfully attempted to update the identity with ID {id} changing the following properties: {properties}",
                 id,
                 string.Join(", ", operations.Select(o => o.Path)));
             

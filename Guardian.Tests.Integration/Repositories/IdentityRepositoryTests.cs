@@ -44,6 +44,45 @@ public class IdentityRepositoryTests
     }
 
     [TestMethod]
+    public async Task CreateAsync_CreatesWithExistingId()
+    {
+        // Arrange
+        string id = "test";
+        Identity identity = new(id);
+
+        Mock<ILogger> logger = new();
+
+        Mock<ItemResponse<Identity>> itemResponse = new();
+        itemResponse
+            .Setup(x => x.Resource)
+            .Returns(identity);
+
+        Mock<Container> container = new();
+        container
+            .Setup(x => x.CreateItemAsync(
+                It.IsAny<Identity>(),
+                It.IsAny<PartitionKey>(),
+                null,
+                default))
+            .ReturnsAsync(itemResponse.Object);
+
+        Mock<CosmosClient> cosmosClient = new();
+        cosmosClient
+            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(container.Object);
+
+        IdentityRepository identityRepository = new(
+            logger.Object,
+            cosmosClient.Object);
+
+        // Act
+        Identity res = await identityRepository.CreateAsync(id);
+
+        // Assert
+        Assert.AreEqual(identity.Id, res.Id);
+    }
+
+    [TestMethod]
     public async Task GetByIdAsync_GetsExistingIdentity()
     {
         // Arrange

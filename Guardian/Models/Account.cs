@@ -24,12 +24,6 @@ public class Account
     public string PasswordHashed { get; }
 
     /// <summary>
-    /// The salt used to hash the password.
-    /// </summary>
-    [JsonPropertyName("salt")]
-    public string Salt { get; }
-
-    /// <summary>
     /// Whether or not the user has verified their email address.
     /// </summary>
     [JsonPropertyName("verified")]
@@ -39,13 +33,11 @@ public class Account
         string id,
         string emailAddress,
         string passwordHashed,
-        string salt,
         bool verified)
     {
         Id = id;
         EmailAddress = emailAddress;
         PasswordHashed = passwordHashed;
-        Salt = salt;
         Verified = verified;
     }
 }
