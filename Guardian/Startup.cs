@@ -39,6 +39,7 @@ class Startup : FunctionsStartup
         builder.Services.AddScoped<IAccountRepository, AccountRepository>();
         builder.Services.AddScoped<IIdentityRepository, IdentityRepository>();
         builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
+        builder.Services.AddScoped<IRecoveryCodeRepository, RecoveryCodeRepository>();
 
         // Setup services
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
