@@ -1,4 +1,6 @@
-﻿using Semifinals.Guardian.Models;
+﻿using Microsoft.VisualBasic;
+using Semifinals.Guardian.Mocks;
+using Semifinals.Guardian.Models;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -9,31 +11,31 @@ public class IntegrationRepositoryTests
     public async Task CreateAsync_CreatesIntegration()
     {
         // Arrange
+        string id = "id";
         string identityId = "identityId";
         string platform = "platform";
             
-        Integration integration = new("id", identityId, platform);
+        Integration integration = new(id, identityId, platform);
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Integration>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(integration);
-
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.CreateItemAsync(
-                It.IsAny<Integration>(),
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Integration>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(integration);
+                
+                container
+                    .Setup(x => x.CreateItemAsync(
+                        It.IsAny<Integration>(),
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         IntegrationRepository integrationRepository = new(
             logger.Object,
@@ -41,6 +43,7 @@ public class IntegrationRepositoryTests
 
         // Act
         Integration res = await integrationRepository.CreateAsync(
+            id,
             identityId,
             platform);
 
@@ -55,26 +58,25 @@ public class IntegrationRepositoryTests
         string id = "test";
         Integration integration = new(id, "identityId", "platform");
 
-        Mock<ILogger> logger = new();
+        Mock<ILogger> logger = new();      
 
-        Mock<ItemResponse<Integration>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(integration);
-
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.ReadItemAsync<Integration>(
-                id,
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Integration>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(integration);
+                
+                container
+                    .Setup(x => x.ReadItemAsync<Integration>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         IntegrationRepository integrationRepository = new(
             logger.Object,
@@ -96,19 +98,18 @@ public class IntegrationRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.ReadItemAsync<Integration>(
-                id,
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.ReadItemAsync<Integration>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
 
         IntegrationRepository integrationRepository = new(
             logger.Object,
@@ -130,25 +131,24 @@ public class IntegrationRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Integration>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(integration);
-
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.PatchItemAsync<Integration>(
-                id,
-                It.IsAny<PartitionKey>(),
-                It.IsAny<IReadOnlyList<PatchOperation>>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Integration>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(integration);
+                
+                container
+                    .Setup(x => x.PatchItemAsync<Integration>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        It.IsAny<IReadOnlyList<PatchOperation>>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();        
 
         IntegrationRepository integrationRepository = new(
             logger.Object,
@@ -175,20 +175,19 @@ public class IntegrationRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.PatchItemAsync<Integration>(
-                id,
-                It.IsAny<PartitionKey>(),
-                It.IsAny<IReadOnlyList<PatchOperation>>(),
-                null,
-                default))
-            .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.PatchItemAsync<Integration>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        It.IsAny<IReadOnlyList<PatchOperation>>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
 
         IntegrationRepository integrationRepository = new(
             logger.Object,
@@ -214,24 +213,23 @@ public class IntegrationRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Integration>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(value: null!);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Integration>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(value: null!);
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.DeleteItemAsync<Integration>(
-                id,
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+                container
+                    .Setup(x => x.DeleteItemAsync<Integration>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         IntegrationRepository integrationRepository = new(
             logger.Object,

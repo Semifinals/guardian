@@ -40,10 +40,13 @@ public class IdentityRepository : IIdentityRepository
 {    
     private readonly ILogger _logger;
     private readonly CosmosClient _cosmosClient;
-    
-    private Container Container => _cosmosClient.GetContainer(
-        "identity-db",
-        "identities");
+
+    private Task<Container> GetIdentityContainer()
+    {
+        return _cosmosClient.UseContainer(
+            "identity-db",
+            "identities");
+    }
 
     public IdentityRepository(ILogger logger, CosmosClient cosmosClient)
     {
@@ -53,9 +56,11 @@ public class IdentityRepository : IIdentityRepository
 
     public async Task<Identity> CreateAsync(string? id = null)
     {
+        Container container = await GetIdentityContainer();
+        
         id ??= ShortId.Generate(new(useSpecialCharacters: false, length: 8));
         
-        Identity identity = await Container.CreateItemAsync<Identity>(new(id), new(id));
+        Identity identity = await container.CreateItemAsync<Identity>(new(id), new(id));
         
         _logger.LogInformation("Created new identity with ID {id}", id);
         
@@ -64,10 +69,12 @@ public class IdentityRepository : IIdentityRepository
 
     public async Task<Identity?> GetByIdAsync(string id)
     {
+        Container container = await GetIdentityContainer();
+        
         Identity identity;
         try
         {
-            identity = await Container.ReadItemAsync<Identity>(id, new(id));
+            identity = await container.ReadItemAsync<Identity>(id, new(id));
         }
         catch (CosmosException)
         {
@@ -87,10 +94,12 @@ public class IdentityRepository : IIdentityRepository
         string id,
         IEnumerable<PatchOperation> operations)
     {
+        Container container = await GetIdentityContainer();
+        
         Identity identity;
         try
         {
-            identity = await Container.PatchItemAsync<Identity>(
+            identity = await container.PatchItemAsync<Identity>(
                 id,
                 new(id),
                 (IReadOnlyList<PatchOperation>)operations);
@@ -112,10 +121,12 @@ public class IdentityRepository : IIdentityRepository
 
         return identity;
     }
-
+    
     public async Task DeleteByIdAsync(string id)
     {
-        await Container.DeleteItemAsync<Identity>(id, new(id));
+        Container container = await GetIdentityContainer();
+        
+        await container.DeleteItemAsync<Identity>(id, new(id));
 
         _logger.LogInformation("Deleted the identity with ID {id}", id);
     }

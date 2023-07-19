@@ -7,10 +7,11 @@ public interface IIntegrationRepository
     /// <summary>
     /// Create a new integration.
     /// </summary>
-    /// <param name="identityId">The unique ID on the given platform</param>
+    /// <param name="id">The unique ID on the given platform</param>
+    /// <param name="identityId">The ID of the associated identity</param>
     /// <param name="platform">The platform the integration comes from</param>
     /// <returns>The newly created integration</returns>
-    Task<Integration> CreateAsync(string identityId, string platform);
+    Task<Integration> CreateAsync(string id, string identityId, string platform);
 
     /// <summary>
     /// Get an integration by its ID.
@@ -42,9 +43,12 @@ public class IntegrationRepository : IIntegrationRepository
     private readonly ILogger _logger;
     private readonly CosmosClient _cosmosClient;
 
-    private Container Container => _cosmosClient.GetContainer(
-        "identity-db",
-        "integrations");
+    private Task<Container> GetIntegrationContainer()
+    {
+        return _cosmosClient.UseContainer(
+            "identity-db",
+            "integrations");
+    }
 
     public IntegrationRepository(ILogger logger, CosmosClient cosmosClient)
     {
@@ -52,11 +56,11 @@ public class IntegrationRepository : IIntegrationRepository
         _cosmosClient = cosmosClient;
     }
     
-    public async Task<Integration> CreateAsync(string identityId, string platform)
+    public async Task<Integration> CreateAsync(string id, string identityId, string platform)
     {
-        string id = ShortId.Generate(new(useSpecialCharacters: false, length: 8));
+        Container container = await GetIntegrationContainer();
         
-        Integration integration = await Container.CreateItemAsync<Integration>(
+        Integration integration = await container.CreateItemAsync<Integration>(
             new(id, identityId, platform),
             new(id));
 
@@ -67,10 +71,12 @@ public class IntegrationRepository : IIntegrationRepository
     
     public async Task<Integration?> GetByIdAsync(string id)
     {
+        Container container = await GetIntegrationContainer();
+        
         Integration integration;
         try
         {
-            integration = await Container.ReadItemAsync<Integration>(id, new(id));
+            integration = await container.ReadItemAsync<Integration>(id, new(id));
         }
         catch (CosmosException)
         {
@@ -90,10 +96,12 @@ public class IntegrationRepository : IIntegrationRepository
         string id,
         IEnumerable<PatchOperation> operations)
     {
+        Container container = await GetIntegrationContainer();
+        
         Integration integration;
         try
         {
-            integration = await Container.PatchItemAsync<Integration>(
+            integration = await container.PatchItemAsync<Integration>(
                 id,
                 new(id),
                 (IReadOnlyList<PatchOperation>)operations);
@@ -118,7 +126,9 @@ public class IntegrationRepository : IIntegrationRepository
 
     public async Task DeleteByIdAsync(string id)
     {
-        await Container.DeleteItemAsync<Integration>(id, new(id));
+        Container container = await GetIntegrationContainer();
+        
+        await container.DeleteItemAsync<Integration>(id, new(id));
 
         _logger.LogInformation("Deleted the integration with ID {id}", id);
     }    

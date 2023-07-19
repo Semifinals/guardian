@@ -1,4 +1,5 @@
-﻿using Semifinals.Guardian.Models;
+﻿using Semifinals.Guardian.Mocks;
+using Semifinals.Guardian.Models;
 using System.Security.Principal;
 
 namespace Semifinals.Guardian.Repositories;
@@ -18,24 +19,23 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Account>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(account);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Account>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(account);
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.CreateItemAsync(
-                It.IsAny<Account>(),
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+                container
+                    .Setup(x => x.CreateItemAsync(
+                        It.IsAny<Account>(),
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,
@@ -63,24 +63,23 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Account>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(account);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Account>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(account);
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.CreateItemAsync(
-                It.IsAny<Account>(),
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+                container
+                    .Setup(x => x.CreateItemAsync(
+                        It.IsAny<Account>(),
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,
@@ -109,24 +108,23 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Account>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(account);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Account>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(account);
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.ReadItemAsync<Account>(
-                id,
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+                container
+                    .Setup(x => x.ReadItemAsync<Account>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,
@@ -148,19 +146,20 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.ReadItemAsync<Account>(
-                id,
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+        
 
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.ReadItemAsync<Account>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,
@@ -186,25 +185,24 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Account>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(account);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Account>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(account);
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.PatchItemAsync<Account>(
-                id,
-                It.IsAny<PartitionKey>(),
-                It.IsAny<IReadOnlyList<PatchOperation>>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+                container
+                    .Setup(x => x.PatchItemAsync<Account>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        It.IsAny<IReadOnlyList<PatchOperation>>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,
@@ -231,20 +229,19 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.PatchItemAsync<Account>(
-                id,
-                It.IsAny<PartitionKey>(),
-                It.IsAny<IReadOnlyList<PatchOperation>>(),
-                null,
-                default))
-            .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.PatchItemAsync<Account>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        It.IsAny<IReadOnlyList<PatchOperation>>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,
@@ -270,24 +267,23 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        Mock<ItemResponse<Account>> itemResponse = new();
-        itemResponse
-            .Setup(x => x.Resource)
-            .Returns(value: null!);
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                Mock<ItemResponse<Account>> itemResponse = new();
+                itemResponse
+                    .Setup(x => x.Resource)
+                    .Returns(value: null!);
 
-        Mock<Container> container = new();
-        container
-            .Setup(x => x.DeleteItemAsync<Account>(
-                id,
-                It.IsAny<PartitionKey>(),
-                null,
-                default))
-            .ReturnsAsync(itemResponse.Object);
-
-        Mock<CosmosClient> cosmosClient = new();
-        cosmosClient
-            .Setup(x => x.GetContainer(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(container.Object);
+                container
+                    .Setup(x => x.DeleteItemAsync<Account>(
+                        id,
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ReturnsAsync(itemResponse.Object);
+            })
+            .Create();
 
         AccountRepository accountRepository = new(
             logger.Object,

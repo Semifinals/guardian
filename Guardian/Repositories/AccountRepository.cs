@@ -47,9 +47,12 @@ public class AccountRepository : IAccountRepository
     private readonly ILogger _logger;
     private readonly CosmosClient _cosmosClient;
 
-    private Container Container => _cosmosClient.GetContainer(
-        "identity-db",
-        "accounts");
+    private Task<Container> GetAccountContainer()
+    {
+        return _cosmosClient.UseContainer(
+            "identity-db",
+            "accounts");
+    }
 
     public AccountRepository(ILogger logger, CosmosClient cosmosClient)
     {
@@ -62,9 +65,11 @@ public class AccountRepository : IAccountRepository
         string passwordHashed,
         string? id = null)
     {
+        Container container = await GetAccountContainer();
+        
         id ??= ShortId.Generate(new(useSpecialCharacters: false, length: 8));
 
-        Account account = await Container.CreateItemAsync<Account>(
+        Account account = await container.CreateItemAsync<Account>(
             new(id, emailAddress, passwordHashed, false),
             new(id));
 
@@ -75,10 +80,12 @@ public class AccountRepository : IAccountRepository
 
     public async Task<Account?> GetByIdAsync(string id)
     {
+        Container container = await GetAccountContainer();
+        
         Account account;
         try
         {
-            account = await Container.ReadItemAsync<Account>(id, new(id));
+            account = await container.ReadItemAsync<Account>(id, new(id));
         }
         catch (CosmosException)
         {
@@ -98,10 +105,12 @@ public class AccountRepository : IAccountRepository
         string id,
         IEnumerable<PatchOperation> operations)
     {
+        Container container = await GetAccountContainer();
+        
         Account account;
         try
         {
-            account = await Container.PatchItemAsync<Account>(
+            account = await container.PatchItemAsync<Account>(
                 id,
                 new(id),
                 (IReadOnlyList<PatchOperation>)operations);
@@ -126,7 +135,9 @@ public class AccountRepository : IAccountRepository
 
     public async Task DeleteByIdAsync(string id)
     {
-        await Container.DeleteItemAsync<Account>(id, new(id));
+        Container container = await GetAccountContainer();
+        
+        await container.DeleteItemAsync<Account>(id, new(id));
 
         _logger.LogInformation("Deleted the account with ID {id}", id);
     }
