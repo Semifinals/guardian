@@ -1,6 +1,5 @@
 ﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
-using System.Security.Principal;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -42,11 +41,12 @@ public class AccountRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Account res = await accountRepository.CreateAsync(
+        Account? res = await accountRepository.CreateAsync(
             emailAddress,
             passwordHashed);
-        
+
         // Assert
+        Assert.IsNotNull(res);
         Assert.AreEqual(account.Id, res.Id);
     }
 
@@ -86,13 +86,54 @@ public class AccountRepositoryTests
             cosmosClient.Object);
         
         // Act
-        Account res = await accountRepository.CreateAsync(
+        Account? res = await accountRepository.CreateAsync(
             emailAddress,
             passwordHashed,
             id);
 
         // Assert
+        Assert.IsNotNull(res);
         Assert.AreEqual(account.Id, res.Id);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_FailsRecreatingExistingAccount()
+    {
+        // Arrange
+        string id = "test";
+        string emailAddress = "user@example.com";
+        string passwordHashed = "abcd";
+        bool verified = false;
+
+        Account account = new(id, emailAddress, passwordHashed, verified);
+
+        Mock<ILogger> logger = new();
+
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.CreateItemAsync(
+                        It.IsAny<Account>(),
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
+
+        AccountRepository accountRepository = new(
+            logger.Object,
+            cosmosClient.Object);
+
+        // Act
+        Account? res = await accountRepository.CreateAsync(
+            emailAddress,
+            passwordHashed,
+            id);
+
+        // Assert
+        Assert.IsNull(res);
     }
 
     [TestMethod]
@@ -294,7 +335,7 @@ public class AccountRepositoryTests
 
         // Assert
 
-        // Because this method doesn't care if the identity exists or not,
+        // Because this method doesn't care if the account exists or not,
         // we don't need to assert anything here. It will fail if something
         // else is wrong with the method.
     }

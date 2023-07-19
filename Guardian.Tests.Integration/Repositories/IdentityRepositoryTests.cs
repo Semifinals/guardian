@@ -1,6 +1,5 @@
 ﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
-using System.Security.Principal;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -38,9 +37,10 @@ public class IdentityRepositoryTests
             cosmosClient.Object);
         
         // Act
-        Identity res = await identityRepository.CreateAsync();
+        Identity? res = await identityRepository.CreateAsync();
 
         // Assert
+        Assert.IsNotNull(res);
         Assert.AreEqual(identity.Id, res.Id);
     }
 
@@ -76,10 +76,44 @@ public class IdentityRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Identity res = await identityRepository.CreateAsync(id);
+        Identity? res = await identityRepository.CreateAsync(id);
 
         // Assert
+        Assert.IsNotNull(res);
         Assert.AreEqual(identity.Id, res.Id);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_FailsRecreatingExistingIdentity()
+    {
+        // Arrange
+        string id = "test";
+        Identity identity = new(id);
+
+        Mock<ILogger> logger = new();
+
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.CreateItemAsync(
+                        It.IsAny<Identity>(),
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
+
+        IdentityRepository identityRepository = new(
+            logger.Object,
+            cosmosClient.Object);
+
+        // Act
+        Identity? res = await identityRepository.CreateAsync(id);
+
+        // Assert
+        Assert.IsNull(res);
     }
 
     [TestMethod]

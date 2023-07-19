@@ -11,7 +11,7 @@ public interface IIntegrationRepository
     /// <param name="identityId">The ID of the associated identity</param>
     /// <param name="platform">The platform the integration comes from</param>
     /// <returns>The newly created integration</returns>
-    Task<Integration> CreateAsync(string id, string identityId, string platform);
+    Task<Integration?> CreateAsync(string id, string identityId, string platform);
 
     /// <summary>
     /// Get an integration by its ID.
@@ -56,13 +56,23 @@ public class IntegrationRepository : IIntegrationRepository
         _cosmosClient = cosmosClient;
     }
     
-    public async Task<Integration> CreateAsync(string id, string identityId, string platform)
+    public async Task<Integration?> CreateAsync(string id, string identityId, string platform)
     {
         Container container = await GetIntegrationContainer();
-        
-        Integration integration = await container.CreateItemAsync<Integration>(
+
+        Integration integration;
+        try
+        {
+            integration = await container.CreateItemAsync<Integration>(
             new(id, identityId, platform),
             new(id));
+        }
+        catch (CosmosException)
+        {
+            _logger.LogInformation("Failed to create new integration with ID {id}", id);
+
+            return null;
+        }
 
         _logger.LogInformation("Created new integration with ID {id}", id);
         

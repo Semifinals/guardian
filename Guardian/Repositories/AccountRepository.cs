@@ -1,4 +1,5 @@
 ﻿using Semifinals.Guardian.Models;
+using System.Security.Principal;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -12,7 +13,7 @@ public interface IAccountRepository
     /// <param name="passwordHashed">The account's password after being hashed</param>
     /// <param name="id">The ID of the identity if it already exists</param>
     /// <returns></returns>
-    Task<Account> CreateAsync(
+    Task<Account?> CreateAsync(
         string emailAddress,
         string passwordHashed,
         string? id = null);
@@ -60,7 +61,7 @@ public class AccountRepository : IAccountRepository
         _cosmosClient = cosmosClient;
     }
     
-    public async Task<Account> CreateAsync(
+    public async Task<Account?> CreateAsync(
         string emailAddress,
         string passwordHashed,
         string? id = null)
@@ -69,9 +70,19 @@ public class AccountRepository : IAccountRepository
         
         id ??= ShortId.Generate(new(useSpecialCharacters: false, length: 8));
 
-        Account account = await container.CreateItemAsync<Account>(
+        Account account;
+        try
+        {
+            account = await container.CreateItemAsync<Account>(
             new(id, emailAddress, passwordHashed, false),
             new(id));
+        }
+        catch (CosmosException)
+        {
+            _logger.LogInformation("Failed to create new account with ID {id}", id);
+
+            return null;
+        }
 
         _logger.LogInformation("Created new account with ID {id}", id);
 

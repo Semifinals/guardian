@@ -1,4 +1,5 @@
 ﻿using Semifinals.Guardian.Models;
+using System.Security.Principal;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -9,7 +10,7 @@ public interface IIdentityRepository
     /// for a new first-party account.
     /// </summary>
     /// <returns>The newly created identity</returns>
-    Task<Identity> CreateAsync(string? id = null);
+    Task<Identity?> CreateAsync(string? id = null);
 
     /// <summary>
     /// Get an identity by its ID.
@@ -54,14 +55,24 @@ public class IdentityRepository : IIdentityRepository
         _cosmosClient = cosmosClient;
     }
 
-    public async Task<Identity> CreateAsync(string? id = null)
+    public async Task<Identity?> CreateAsync(string? id = null)
     {
         Container container = await GetIdentityContainer();
         
         id ??= ShortId.Generate(new(useSpecialCharacters: false, length: 8));
-        
-        Identity identity = await container.CreateItemAsync<Identity>(new(id), new(id));
-        
+
+        Identity identity;
+        try
+        {
+            identity = await container.CreateItemAsync<Identity>(new(id), new(id));
+        }
+        catch (CosmosException)
+        {
+            _logger.LogInformation("Failed to create new identity with ID {id}", id);
+
+            return null;
+        }
+
         _logger.LogInformation("Created new identity with ID {id}", id);
         
         return identity;

@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic;
-using Semifinals.Guardian.Mocks;
+﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
 
 namespace Semifinals.Guardian.Repositories;
@@ -42,13 +41,53 @@ public class IntegrationRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Integration res = await integrationRepository.CreateAsync(
+        Integration? res = await integrationRepository.CreateAsync(
             id,
             identityId,
             platform);
 
         // Assert
+        Assert.IsNotNull(res);
         Assert.AreEqual(integration.Id, res.Id);
+    }
+    
+    [TestMethod]
+    public async Task CreateAsync_FailsRecreatingExistingIntegration()
+    {
+        // Arrange
+        string id = "id";
+        string identityId = "identityId";
+        string platform = "platform";
+
+        Integration integration = new(id, identityId, platform);
+
+        Mock<ILogger> logger = new();
+
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                container
+                    .Setup(x => x.CreateItemAsync(
+                        It.IsAny<Integration>(),
+                        It.IsAny<PartitionKey>(),
+                        null,
+                        default))
+                    .ThrowsAsync(new CosmosException("", 0, 0, "", 0));
+            })
+            .Create();
+
+        IntegrationRepository integrationRepository = new(
+            logger.Object,
+            cosmosClient.Object);
+
+        // Act
+        Integration? res = await integrationRepository.CreateAsync(
+            id,
+            identityId,
+            platform);
+
+        // Assert
+        Assert.IsNull(res);
     }
 
     [TestMethod]
