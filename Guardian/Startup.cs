@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Semifinals.Guardian.Repositories;
+using Semifinals.Guardian.Services;
 
 [assembly: FunctionsStartup(typeof(Semifinals.Guardian.Startup))]
 
@@ -42,6 +42,8 @@ class Startup : FunctionsStartup
         builder.Services.AddScoped<IRecoveryCodeRepository, RecoveryCodeRepository>();
 
         // Setup services
+        builder.Services.AddScoped<IAssociationService, AssociationService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+        builder.Services.AddScoped<IRecoveryService, RecoveryService>();
     }
 }
