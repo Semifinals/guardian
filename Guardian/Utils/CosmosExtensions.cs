@@ -21,16 +21,27 @@ public static class CosmosExtensions
         string databaseId,
         string containerId,
         string partitionKeyPath = "/id",
-        int defaultTimeToLive = -1)
+        int defaultTimeToLive = -1,
+        Collection<string>? uniqueKeys = null)
     {
         DatabaseResponse databaseResponse = await cosmosClient
             .CreateDatabaseIfNotExistsAsync(databaseId);
+        
+        UniqueKey keys = new();
+        
+        if (uniqueKeys is not null)
+            foreach (string key in uniqueKeys)
+                keys.Paths.Add(key);
 
         ContainerProperties properties = new()
         {
             Id = containerId,
             PartitionKeyPath = partitionKeyPath,
-            DefaultTimeToLive = defaultTimeToLive
+            DefaultTimeToLive = defaultTimeToLive,
+            UniqueKeyPolicy = new()
+            {
+                UniqueKeys = { keys }
+            }
         };
 
         ContainerResponse containerResponse = await databaseResponse.Database

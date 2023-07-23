@@ -52,7 +52,8 @@ public class AccountRepository : IAccountRepository
     {
         return _cosmosClient.UseContainer(
             "identity-db",
-            "accounts");
+            "accounts",
+            uniqueKeys: new() { "emailAddress" });
     }
 
     public AccountRepository(ILogger logger, CosmosClient cosmosClient)
