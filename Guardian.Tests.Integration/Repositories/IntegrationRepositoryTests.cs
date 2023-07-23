@@ -10,11 +10,11 @@ public class IntegrationRepositoryTests
     public async Task CreateAsync_CreatesIntegration()
     {
         // Arrange
-        string id = "id";
         string identityId = "identityId";
         string platform = "platform";
+        string userId = "userId";
             
-        Integration integration = new(id, identityId, platform);
+        Integration integration = new(identityId, platform, userId);
 
         Mock<ILogger> logger = new();
 
@@ -42,9 +42,9 @@ public class IntegrationRepositoryTests
 
         // Act
         Integration? res = await integrationRepository.CreateAsync(
-            id,
             identityId,
-            platform);
+            platform,
+            userId);
 
         // Assert
         Assert.IsNotNull(res);
@@ -55,11 +55,11 @@ public class IntegrationRepositoryTests
     public async Task CreateAsync_FailsRecreatingExistingIntegration()
     {
         // Arrange
-        string id = "id";
         string identityId = "identityId";
         string platform = "platform";
+        string userId = "userId";
 
-        Integration integration = new(id, identityId, platform);
+        Integration integration = new(identityId, platform, userId);
 
         Mock<ILogger> logger = new();
 
@@ -82,9 +82,9 @@ public class IntegrationRepositoryTests
 
         // Act
         Integration? res = await integrationRepository.CreateAsync(
-            id,
             identityId,
-            platform);
+            platform,
+            userId);
 
         // Assert
         Assert.IsNull(res);
@@ -94,8 +94,11 @@ public class IntegrationRepositoryTests
     public async Task GetByIdAsync_GetsExistingIntegration()
     {
         // Arrange
-        string id = "test";
-        Integration integration = new(id, "identityId", "platform");
+        string platform = "platform";
+        string userId = "userId";
+        string id = Integration.GetCompositeId(platform, userId);
+        
+        Integration integration = new("identityId", platform, userId);
 
         Mock<ILogger> logger = new();      
 
@@ -165,8 +168,11 @@ public class IntegrationRepositoryTests
     public async Task UpdateByIdAsync_UpdatesExistingIntegration()
     {
         // Arrange
-        string id = "test";
-        Integration integration = new(id, "identityId", "platform");
+        string platform = "platform";
+        string userId = "userId";
+        string id = Integration.GetCompositeId(platform, userId);
+        
+        Integration integration = new("identityId", platform, userId);
 
         Mock<ILogger> logger = new();
 
