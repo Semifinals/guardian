@@ -1,5 +1,6 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
+using Semifinals.Guardian.Utils;
 
 namespace Semifinals.Guardian.Services;
 
@@ -46,13 +47,92 @@ public class AuthenticationService : IAuthenticationService
         string emailAddress,
         string password)
     {
-        throw new NotImplementedException();
+        // Create account
+        string passwordHashed = Crypto.Hash(password);
+        
+        Account? account = await _accountRepository.CreateAsync(
+            emailAddress,
+            passwordHashed);
+
+        if (account is null)
+        {
+            _logger.LogInformation(
+                "Failed to create account {emailAddress} since it is already in use",
+                emailAddress);
+
+            return null;
+        }
+
+        // Create identity corresponding to account
+        Identity? identity = await _identityRepository.CreateAsync(account.Id);
+
+        if (identity is null)
+        {
+            await _accountRepository.DeleteByIdAsync(account.Id);
+
+            _logger.LogCritical(
+                "Account {emailAddress} failed to create because of a problem creating its corresponding identity {id}",
+                emailAddress,
+                account.Id);
+
+            return null;
+        }
+
+        // Return the newly created account
+        _logger.LogInformation(
+            "Account {emailAddress} successfully created with new ID {id}",
+            emailAddress,
+            account.Id);
+
+        return account;
     }
 
     public async Task<Integration?> RegisterWithIntegrationAsync(
-        string platformId,
+        string userId,
         string platform)
     {
-        throw new NotImplementedException();
+        // Create identity
+        Identity? identity = await _identityRepository.CreateAsync();
+
+        if (identity is null)
+        {
+            _logger.LogCritical(
+                "Failed to create generic identity on behalf of new integration {userId} ({platform})",
+                userId,
+                platform);
+
+            return null;
+        }
+
+        // Create integration
+        Integration? integration = await _integrationRepository.CreateAsync(identity.Id, platform, userId);
+
+        if (integration is null)
+        {
+            await _identityRepository.DeleteByIdAsync(identity.Id);
+
+            _logger.LogCritical(
+                "Identity {id} failed to create because of a problem creating its corresponding integration {userId} ({platform})",
+                identity!.Id,
+                userId,
+                platform);
+
+            return null;
+        }
+
+        // Link integration to account
+        await _identityRepository.UpdateByIdAsync(identity.Id, new PatchOperation[]
+        {
+            PatchOperation.Add($"/integrations/{platform}", userId)
+        });
+
+        // Return the newly created integration
+        _logger.LogInformation(
+            "Integration {platforuserIdmId} ({platform}) successfully created with new ID {id}",
+            userId,
+            platform,
+            identity.Id);
+
+        return integration;
     }
 }
