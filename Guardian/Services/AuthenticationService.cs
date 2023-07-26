@@ -128,7 +128,7 @@ public class AuthenticationService : IAuthenticationService
 
         // Return the newly created integration
         _logger.LogInformation(
-            "Integration {platforuserIdmId} ({platform}) successfully created with new ID {id}",
+            "Integration {userId} ({platform}) successfully created with new ID {id}",
             userId,
             platform,
             identity.Id);

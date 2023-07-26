@@ -6,6 +6,18 @@ namespace Semifinals.Guardian.Services;
 public interface IRecoveryService
 {
     /// <summary>
+    /// Verify the email address associated with an account.
+    /// </summary>
+    /// <param name="id">The identity ID</param>
+    /// <param name="emailAddress">The account's email address</param>
+    /// <param name="recoveryCode">The recovery code used to validate the request</param>
+    /// <returns>The updated account</returns>
+    Task<Account?> VerifyAccountAsync(
+        string id,
+        string emailAddress,
+        string recoveryCode);
+
+    /// <summary>
     /// Change the email address of a first-party account. If no recovery code 
     /// is provided, email confirmation should be sent.
     /// </summary>
@@ -14,6 +26,7 @@ public interface IRecoveryService
     /// <param name="recoveryCode">The provided recovery code</param>
     /// <returns>The updated account</returns>
     Task<Account?> ChangeEmailAddressAsync(
+        string id,
         string oldEmailAddress,
         string newEmailAddress,
         string? recoveryCode = null);
@@ -26,6 +39,7 @@ public interface IRecoveryService
     /// <param name="newPassword">The user's new password</param>
     /// <returns>The updated account</returns>
     Task<Account?> ChangePasswordAsync(
+        string id,
         string emailAddress,
         string oldPassword,
         string newPassword);
@@ -39,6 +53,7 @@ public interface IRecoveryService
     /// <param name="newPassword">The user's new password</param>
     /// <returns>The updated account</returns>
     Task<Account?> ResetPasswordAsync(
+        string id,
         string emailAddress,
         string newPassword,
         string recoveryCode);
@@ -67,7 +82,16 @@ public class RecoveryService : IRecoveryService
         _recoveryCodeRepository = recoveryCodeRepository;
     }
 
+    public async Task<Account?> VerifyAccountAsync(
+        string id,
+        string emailAddress,
+        string recoveryCode)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task<Account?> ChangeEmailAddressAsync(
+        string id,
         string oldEmailAddress,
         string newEmailAddress,
         string? recoveryCode = null)
@@ -76,6 +100,7 @@ public class RecoveryService : IRecoveryService
     }
 
     public async Task<Account?> ChangePasswordAsync(
+        string id,
         string emailAddress,
         string oldPassword,
         string newPassword)
@@ -84,6 +109,7 @@ public class RecoveryService : IRecoveryService
     }
 
     public async Task<Account?> ResetPasswordAsync(
+        string id,
         string emailAddress,
         string newPassword,
         string recoveryCode)
