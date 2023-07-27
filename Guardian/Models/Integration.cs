@@ -40,8 +40,14 @@ public class Integration
         UserId = userId;
     }
 
+    /// <summary>
+    /// Generate a composite ID for an integration.
+    /// </summary>
+    /// <param name="platform">The platform the integration is for</param>
+    /// <param name="userId">The user's unique ID on the platform</param>
+    /// <returns>The composite ID of the two properties</returns>
     public static string GetCompositeId(string platform, string userId)
     {
-        return platform + userId;
+        return $"{platform}:{userId}";
     }
 }

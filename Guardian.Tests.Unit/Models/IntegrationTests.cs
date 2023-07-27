@@ -14,6 +14,6 @@ public class IntegrationTests
         string compositeId = Integration.GetCompositeId(platform, userId);
 
         // Assert
-        Assert.AreEqual("platformuserId", compositeId);
+        Assert.AreEqual("platform:userId", compositeId);
     }
 }
