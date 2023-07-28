@@ -1,4 +1,5 @@
 ﻿using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -19,7 +20,8 @@ public interface IRecoveryCodeRepository
     /// <param name="identityId">The ID of the identity the code is for</param>
     /// <param name="type">The type of recovery it can perform</param>
     /// <returns>The requested recovery code if it exists</returns>
-    Task<RecoveryCode?> GetByIdAsync(string identityId, string type);
+    /// <exception cref="RecoveryCodeNotFoundException">Occurs when the recovery code does not exist</exception>
+    Task<RecoveryCode> GetByIdAsync(string identityId, string type);
 
     /// <summary>
     /// Delete a recovery code by the given ID.
@@ -66,7 +68,7 @@ public class RecoveryCodeRepository : IRecoveryCodeRepository
         return recoveryCode;
     }
 
-    public async Task<RecoveryCode?> GetByIdAsync(string identityId, string type)
+    public async Task<RecoveryCode> GetByIdAsync(string identityId, string type)
     {
         Container container = await GetRepositoryCodeContainer();
         
@@ -83,13 +85,13 @@ public class RecoveryCodeRepository : IRecoveryCodeRepository
                 "Unsuccessfully attempted to fetch the recovery for ID {id}",
                 identityId);
 
-            return null;
+            throw new RecoveryCodeNotFoundException(identityId, type);
         }
 
         _logger.LogInformation(
                "Successfully fetched the recovery code for ID {id}",
                identityId);
-
+        
         return recoveryCode;
     }
 

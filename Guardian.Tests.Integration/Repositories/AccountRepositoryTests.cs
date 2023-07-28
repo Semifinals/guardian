@@ -1,5 +1,6 @@
 ﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -41,12 +42,11 @@ public class AccountRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Account? res = await accountRepository.CreateAsync(
+        Account res = await accountRepository.CreateAsync(
             emailAddress,
             passwordHashed);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(account.Id, res.Id);
     }
 
@@ -86,13 +86,12 @@ public class AccountRepositoryTests
             cosmosClient.Object);
         
         // Act
-        Account? res = await accountRepository.CreateAsync(
+        Account res = await accountRepository.CreateAsync(
             emailAddress,
             passwordHashed,
             id);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(account.Id, res.Id);
     }
 
@@ -125,15 +124,15 @@ public class AccountRepositoryTests
         AccountRepository accountRepository = new(
             logger.Object,
             cosmosClient.Object);
-
+        
         // Act
-        Account? res = await accountRepository.CreateAsync(
+        Task<Account> res() => accountRepository.CreateAsync(
             emailAddress,
             passwordHashed,
             id);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<AlreadyExistsException>(res);
     }
 
     [TestMethod]
@@ -172,10 +171,9 @@ public class AccountRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Account? res = await accountRepository.GetByIdAsync(id);
+        Account res = await accountRepository.GetByIdAsync(id);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(account.Id, res.Id);
     }
 
@@ -207,10 +205,10 @@ public class AccountRepositoryTests
             cosmosClient.Object);
         
         // Act
-        Account? res = await accountRepository.GetByIdAsync(id);
+        Task<Account> res() => accountRepository.GetByIdAsync(id);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(res);
     }
 
     [TestMethod]
@@ -255,10 +253,9 @@ public class AccountRepositoryTests
         };
 
         // Act
-        Account? res = await accountRepository.UpdateByIdAsync(id, operations);
+        Account res = await accountRepository.UpdateByIdAsync(id, operations);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(account.Id, res.Id);
     }
 
@@ -294,10 +291,10 @@ public class AccountRepositoryTests
         };
 
         // Act
-        Account? res = await accountRepository.UpdateByIdAsync(id, operations);
+        Task<Account> res() => accountRepository.UpdateByIdAsync(id, operations);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(res);
     }
 
     [TestMethod]

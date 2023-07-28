@@ -1,6 +1,6 @@
-﻿using Semifinals.Guardian.Mocks;
-using Semifinals.Guardian.Models;
+﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Services;
 
@@ -40,12 +40,11 @@ public class AuthenticationServiceTests
             integrationRepository.Object);
 
         // Act
-        Account? account = await authenticationService.RegisterWithAccountAsync(
+        Account account = await authenticationService.RegisterWithAccountAsync(
             emailAddress,
             password);
 
         // Assert
-        Assert.IsNotNull(account);
         Assert.AreEqual(id, account.Id);
         Assert.AreEqual(passwordHashed, account.PasswordHashed);
     }
@@ -64,7 +63,7 @@ public class AuthenticationServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 null))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AlreadyExistsException());
 
         AuthenticationService authenticationService = new(
             logger.Object,
@@ -73,12 +72,12 @@ public class AuthenticationServiceTests
             integrationRepository.Object);
 
         // Act
-        Account? account = await authenticationService.RegisterWithAccountAsync(
+        Task<Account> account() => authenticationService.RegisterWithAccountAsync(
             "user@example.com",
             "password");
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<AlreadyExistsException>(account);
     }
 
     [TestMethod]
@@ -117,12 +116,11 @@ public class AuthenticationServiceTests
             integrationRepository.Object);
 
         // Act
-        Integration? integration = await authenticationService.RegisterWithIntegrationAsync(
+        Integration integration = await authenticationService.RegisterWithIntegrationAsync(
             userId,
             platform);
 
         // Assert
-        Assert.IsNotNull(integration);
         Assert.AreEqual(userId, integration.UserId);
     }
 
@@ -145,7 +143,7 @@ public class AuthenticationServiceTests
 
         integrationRepository
             .Setup(x => x.CreateAsync(identityId, platform, userId))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AlreadyExistsException());
 
         AuthenticationService authenticationService = new(
             logger.Object,
@@ -154,11 +152,11 @@ public class AuthenticationServiceTests
             integrationRepository.Object);
 
         // Act
-        Integration? integration = await authenticationService.RegisterWithIntegrationAsync(
+        Task<Integration> integration() => authenticationService.RegisterWithIntegrationAsync(
             userId,
             platform);
 
         // Assert
-        Assert.IsNull(integration);
+        await Assert.ThrowsExceptionAsync<AlreadyExistsException>(integration);
     }
 }

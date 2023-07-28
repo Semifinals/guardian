@@ -1,6 +1,7 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Utils;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Services;
 
@@ -35,12 +36,11 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        RecoveryCode? recoveryCode = await recoveryService.CreateCodeAsync(
+        RecoveryCode recoveryCode = await recoveryService.CreateCodeAsync(
             identityId,
             type);
 
         // Assert
-        Assert.IsNotNull(recoveryCode);
         Assert.AreEqual(identityId, recoveryCode.IdentityId);
         Assert.AreEqual(type, recoveryCode.Type);
     }
@@ -96,7 +96,7 @@ public class RecoveryServiceTests
 
         recoveryCodeRepository
             .Setup(x => x.GetByIdAsync(identityId, type))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new RecoveryCodeNotFoundException(identityId, type));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -153,13 +153,12 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.VerifyAccountAsync(
+        Account account = await recoveryService.VerifyAccountAsync(
             identityId,
             emailAddress,
             code);
 
         // Assert
-        Assert.IsNotNull(account);
         Assert.AreEqual(identityId, account.Id);
         Assert.IsTrue(account.Verified);
     }
@@ -170,7 +169,7 @@ public class RecoveryServiceTests
         // Arrange
         string identityId = "identityId";
         string emailAddress = "user@example.com";
-        string type = "type";
+        string type = "VerifyEmailAddress";
         string code = "code";
 
         Mock<ILogger> logger = new();
@@ -181,7 +180,7 @@ public class RecoveryServiceTests
         
         recoveryCodeRepository
             .Setup(x => x.GetByIdAsync(identityId, type))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new RecoveryCodeNotFoundException(identityId, type));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -191,13 +190,13 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.VerifyAccountAsync(
+        Task<Account> account() => recoveryService.VerifyAccountAsync(
             identityId,
             emailAddress,
             code);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<InvalidRecoveryCodeException>(account);
     }
 
     [TestMethod]
@@ -206,7 +205,7 @@ public class RecoveryServiceTests
         // Arrange
         string identityId = "identityId";
         string emailAddress = "user@example.com";
-        string type = "type";
+        string type = "VerifyEmailAddress";
         string code = "code";
 
         Mock<ILogger> logger = new();
@@ -223,7 +222,7 @@ public class RecoveryServiceTests
             .Setup(x => x.UpdateByIdAsync(
                 identityId,
                 It.IsAny<IEnumerable<PatchOperation>>()))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AccountNotFoundException(identityId));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -233,13 +232,13 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.VerifyAccountAsync(
+        Task<Account> account() => recoveryService.VerifyAccountAsync(
             identityId,
             emailAddress,
             code);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(account);
     }
 
     [TestMethod]
@@ -280,13 +279,12 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ChangeEmailAddressAsync(
+        Account account = await recoveryService.ChangeEmailAddressAsync(
             identityId,
             emailAddress,
             code);
 
         // Assert
-        Assert.IsNotNull(account);
         Assert.AreEqual(identityId, account.Id);
         Assert.AreEqual(emailAddress, account.EmailAddress);
     }
@@ -308,7 +306,7 @@ public class RecoveryServiceTests
 
         recoveryCodeRepository
             .Setup(x => x.GetByIdAsync(identityId, type))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new RecoveryCodeNotFoundException(identityId, type));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -318,13 +316,13 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ChangeEmailAddressAsync(
+        Task<Account> account() => recoveryService.ChangeEmailAddressAsync(
             identityId,
             emailAddress,
             code);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<InvalidRecoveryCodeException>(account);
     }
 
     [TestMethod]
@@ -350,7 +348,7 @@ public class RecoveryServiceTests
             .Setup(x => x.UpdateByIdAsync(
                 identityId,
                 It.IsAny<IEnumerable<PatchOperation>>()))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AccountNotFoundException(identityId));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -360,13 +358,13 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ChangeEmailAddressAsync(
+        Task<Account> account() => recoveryService.ChangeEmailAddressAsync(
             identityId,
             emailAddress,
             code);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<EmailAddressAlreadyExistsException>(account);
     }
 
     [TestMethod]
@@ -412,14 +410,13 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ChangePasswordAsync(
+        Account account = await recoveryService.ChangePasswordAsync(
             identityId,
             emailAddress,
             oldPassword,
             newPassword);
 
         // Assert
-        Assert.IsNotNull(account);
         Assert.AreEqual(identityId, account.Id);
         Assert.AreEqual(newPasswordHashed, account.PasswordHashed);
     }
@@ -456,14 +453,14 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ChangePasswordAsync(
+        Task<Account> account() => recoveryService.ChangePasswordAsync(
             identityId,
             emailAddress,
             "invalidOldPassword",
             newPassword);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<InvalidPasswordException>(account);
     }
 
     [TestMethod]
@@ -480,10 +477,10 @@ public class RecoveryServiceTests
         Mock<IIdentityRepository> identityRepository = new();
         Mock<IIntegrationRepository> integrationRepository = new();
         Mock<IRecoveryCodeRepository> recoveryCodeRepository = new();
-        
+
         accountRepository
             .Setup(x => x.GetByIdAsync(identityId))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AccountNotFoundException(identityId));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -493,14 +490,14 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ChangePasswordAsync(
+        Task<Account> account() => recoveryService.ChangePasswordAsync(
             identityId,
             emailAddress,
             oldPassword,
             newPassword);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(account);
     }
 
     [TestMethod]
@@ -542,14 +539,13 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ResetPasswordAsync(
+        Account account = await recoveryService.ResetPasswordAsync(
             identityId,
             emailAddress,
             newPassword,
             code);
 
         // Assert
-        Assert.IsNotNull(account);
         Assert.AreEqual(identityId, account.Id);
         Assert.AreEqual(newPasswordHashed, account.PasswordHashed);
     }
@@ -572,7 +568,7 @@ public class RecoveryServiceTests
 
         recoveryCodeRepository
             .Setup(x => x.GetByIdAsync(identityId, type))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new RecoveryCodeNotFoundException(identityId, type));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -582,14 +578,14 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ResetPasswordAsync(
+        Task<Account> account() => recoveryService.ResetPasswordAsync(
             identityId,
             emailAddress,
             newPassword,
             code);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<InvalidRecoveryCodeException>(account);
     }
 
     [TestMethod]
@@ -616,7 +612,7 @@ public class RecoveryServiceTests
             .Setup(x => x.UpdateByIdAsync(
                 identityId,
                 It.IsAny<IEnumerable<PatchOperation>>()))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AccountNotFoundException(identityId));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -626,14 +622,14 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Account? account = await recoveryService.ResetPasswordAsync(
+        Task<Account> account() => recoveryService.ResetPasswordAsync(
             identityId,
             emailAddress,
             newPassword,
             code);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(account);
     }
 
     [TestMethod]
@@ -677,12 +673,11 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Identity? identity = await recoveryService.DeleteByIdAsync(
+        Identity identity = await recoveryService.DeleteByIdAsync(
             identityId,
             code);
 
         // Assert
-        Assert.IsNotNull(identity);
         Assert.AreEqual(identityId, identity.Id);
         Assert.AreEqual(integrations.Count, integrationsDeleted);
     }
@@ -703,7 +698,7 @@ public class RecoveryServiceTests
 
         recoveryCodeRepository
             .Setup(x => x.GetByIdAsync(identityId, type))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new RecoveryCodeNotFoundException(identityId, type));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -713,12 +708,12 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Identity? identity = await recoveryService.DeleteByIdAsync(
+        Task<Identity> identity() => recoveryService.DeleteByIdAsync(
             identityId,
             code);
 
         // Assert
-        Assert.IsNull(identity);
+        await Assert.ThrowsExceptionAsync<InvalidRecoveryCodeException>(identity);
     }
 
     [TestMethod]
@@ -741,7 +736,7 @@ public class RecoveryServiceTests
 
         identityRepository
             .Setup(x => x.GetByIdAsync(identityId))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new IdentityNotFoundException(identityId));
 
         RecoveryService recoveryService = new(
             logger.Object,
@@ -751,11 +746,11 @@ public class RecoveryServiceTests
             recoveryCodeRepository.Object);
 
         // Act
-        Identity? identity = await recoveryService.DeleteByIdAsync(
+        Task<Identity> identity() => recoveryService.DeleteByIdAsync(
             identityId,
             code);
 
         // Assert
-        Assert.IsNull(identity);
+        await Assert.ThrowsExceptionAsync<IdentityNotFoundException>(identity);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Utils;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Services;
 
@@ -14,7 +15,9 @@ public interface IAssociationService
     /// <param name="emailAddress">The user's email address</param>
     /// <param name="password">The user's password</param>
     /// <returns>The newly associated account</returns>
-    Task<Account?> AddAccountAsync(
+    /// <exception cref="IdentityNotFoundException">Occurs when the identity does not exist</exception>
+    /// <exception cref="AlreadyExistsException">Occurs when the account details are already in use</exception>
+    Task<Account> AddAccountAsync(
         string id,
         string emailAddress,
         string password);
@@ -26,7 +29,9 @@ public interface IAssociationService
     /// <param name="platform">The name of the platform registering through</param>
     /// <param name="userId">The user's unique ID on the other platform</param>
     /// <returns>The newly associated integration</returns>
-    Task<Integration?> AddIntegrationAsync(
+    /// <exception cref="IdentityNotFoundException">Occurs when the identity does not exist</exception>
+    /// <exception cref="IdAlreadyExistsException">Occurs when the integration is already in use</exception>
+    Task<Integration> AddIntegrationAsync(
         string id,
         string platform,
         string userId);
@@ -37,7 +42,8 @@ public interface IAssociationService
     /// <param name="id">The user's identity ID</param>
     /// <param name="platform">The name of the platform registering through</param>
     /// <returns>The resulting identity after the integration was removed</returns>
-    Task<Identity?> RemoveIntegrationAsync(
+    /// <exception cref="IdentityNotFoundException">Occurs when the identity does not exist</exception>
+    Task<Identity> RemoveIntegrationAsync(
         string id,
         string platform);
 }
@@ -61,39 +67,46 @@ public class AssociationService : IAssociationService
         _integrationRepository = integrationRepository;
     }
 
-    public async Task<Account?> AddAccountAsync(
+    public async Task<Account> AddAccountAsync(
         string id,
         string emailAddress,
         string password)
     {
         // Check the identity exists
-        Identity? identity = await _identityRepository.GetByIdAsync(id);
-
-        if (identity is null)
+        Identity identity;
+        try
+        {
+            identity = await _identityRepository.GetByIdAsync(id);
+        }
+        catch (IdentityNotFoundException ex)
         {
             _logger.LogCritical(
                 "Failed to add account {emailAddress} to non-existent identity {id}",
                 emailAddress,
                 id);
 
-            return null;
+            throw ex;
         }
 
         // Create the account
-        string passwordHashed = Crypto.Hash(password);
-        Account? account = await _accountRepository.CreateAsync(
-            emailAddress,
-            passwordHashed,
-            id);
-
-        if (account is null)
+        Account account;
+        try
+        {
+            string passwordHashed = Crypto.Hash(password);
+            
+            account = await _accountRepository.CreateAsync(
+                emailAddress,
+                passwordHashed,
+                id);
+        }
+        catch (AlreadyExistsException ex)
         {
             _logger.LogInformation(
                 "Failed to add account {emailAddress} to identity {id} since it is already in use",
                 emailAddress,
                 id);
 
-            return null;
+            throw ex;
         }
 
         // Return the newly created account
@@ -105,40 +118,46 @@ public class AssociationService : IAssociationService
         return account;
     }
 
-    public async Task<Integration?> AddIntegrationAsync(
+    public async Task<Integration> AddIntegrationAsync(
         string id,
         string platform,
         string userId)
     {
         // Check the identity exists
-        Identity? identity = await _identityRepository.GetByIdAsync(id);
-
-        if (identity is null)
+        Identity identity;
+        try
+        {
+            identity = await _identityRepository.GetByIdAsync(id);
+        }
+        catch (IdentityNotFoundException ex)
         {
             _logger.LogCritical(
                 "Failed to add integration {userId} ({platform}) to non-existent identity {id}",
                 userId,
                 platform,
                 id);
-
-            return null;
+            
+            throw ex;
         }
 
         // Create the integration
-        Integration? integration = await _integrationRepository.CreateAsync(
-            id,
-            platform,
-            userId);
-
-        if (integration is null)
+        Integration integration;
+        try
+        {
+            integration = await _integrationRepository.CreateAsync(
+                id,
+                platform,
+                userId);
+        }
+        catch (IdAlreadyExistsException ex)
         {
             _logger.LogInformation(
                 "Failed to add integration {userId} ({platform}) to identity {id} since it is already in use",
                 userId,
                 platform,
                 id);
-
-            return null;
+            
+            throw ex;
         }
 
         // Link integration to account
@@ -157,23 +176,26 @@ public class AssociationService : IAssociationService
         return integration;
     }
     
-    public async Task<Identity?> RemoveIntegrationAsync(
+    public async Task<Identity> RemoveIntegrationAsync(
         string id,
         string platform)
     {
-        Identity? identity = await _identityRepository.UpdateByIdAsync(id, new PatchOperation[]
+        Identity identity;
+        try
         {
+            identity = await _identityRepository.UpdateByIdAsync(id, new PatchOperation[]
+            {
             PatchOperation.Remove($"/integrations/{platform}")
-        });
-
-        if (identity is null)
+            });
+        }
+        catch (IdentityNotFoundException ex)
         {
             _logger.LogInformation(
                 "Failed to remove {platform} integration from identity {id}",
                 platform,
                 id);
-            
-            return null;
+
+            throw ex;
         }
 
         await _integrationRepository.DeleteByIdAsync(id);

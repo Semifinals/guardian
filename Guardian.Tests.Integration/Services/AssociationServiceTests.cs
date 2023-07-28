@@ -1,6 +1,7 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Utils;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Services;
 
@@ -39,13 +40,12 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Account? account = await associationService.AddAccountAsync(
+        Account account = await associationService.AddAccountAsync(
             id,
             emailAddress,
             password);
 
         // Assert
-        Assert.IsNotNull(account);
         Assert.AreEqual(id, account.Id);
     }
 
@@ -64,7 +64,7 @@ public class AssosciationServiceTests
 
         identityRepository
             .Setup(x => x.GetByIdAsync(id))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new IdentityNotFoundException(id));
 
         AssociationService associationService = new(
             logger.Object,
@@ -73,13 +73,13 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Account? account = await associationService.AddAccountAsync(
+        Task<Account> account() => associationService.AddAccountAsync(
             id,
             emailAddress,
             password);
 
         // Assert
-        Assert.IsNull(account);
+        await Assert.ThrowsExceptionAsync<IdentityNotFoundException>(account);
     }
 
     [TestMethod]
@@ -103,8 +103,8 @@ public class AssosciationServiceTests
             .Setup(x => x.CreateAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                null))
-            .ReturnsAsync(value: null);
+                It.IsAny<string>()))
+            .ThrowsAsync(new AlreadyExistsException());
 
         AssociationService associationService = new(
             logger.Object,
@@ -113,13 +113,13 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Account? account = await associationService.AddAccountAsync(
+        Task<Account> account() => associationService.AddAccountAsync(
             id,
             emailAddress,
             password);
 
         // Assert
-        Assert.IsNull(account);        
+        await Assert.ThrowsExceptionAsync<AlreadyExistsException>(account);        
     }
 
     [TestMethod]
@@ -154,13 +154,12 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Integration? integration = await associationService.AddIntegrationAsync(
+        Integration integration = await associationService.AddIntegrationAsync(
             id,
             platform,
             userId);
 
         // Assert
-        Assert.IsNotNull(integration);
         Assert.AreEqual(compositeId, integration.Id);
     }
 
@@ -179,7 +178,7 @@ public class AssosciationServiceTests
 
         identityRepository
             .Setup(x => x.GetByIdAsync(id))
-            .ReturnsAsync(new Identity(id));
+            .ThrowsAsync(new IdentityNotFoundException(id));
 
         AssociationService associationService = new(
             logger.Object,
@@ -188,13 +187,13 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Integration? integration = await associationService.AddIntegrationAsync(
+        Task<Integration> integration() => associationService.AddIntegrationAsync(
             id,
             platform,
             userId);
 
         // Assert
-        Assert.IsNull(integration);
+        await Assert.ThrowsExceptionAsync<IdentityNotFoundException>(integration);
     }
 
     [TestMethod]
@@ -219,7 +218,7 @@ public class AssosciationServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>()))
-            .ReturnsAsync(value: null);
+            .ThrowsAsync(new AlreadyExistsException());
 
         AssociationService associationService = new(
             logger.Object,
@@ -228,13 +227,13 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Integration? integration = await associationService.AddIntegrationAsync(
+        Task<Integration> integration() => associationService.AddIntegrationAsync(
             id,
             platform,
             userId);
 
         // Assert
-        Assert.IsNull(integration);
+        await Assert.ThrowsExceptionAsync<AlreadyExistsException>(integration);
     }
 
     [TestMethod]
@@ -260,7 +259,7 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Identity? identity = await associationService.RemoveIntegrationAsync(
+        Identity identity = await associationService.RemoveIntegrationAsync(
             id,
             platform);
 
@@ -284,8 +283,10 @@ public class AssosciationServiceTests
         Mock<IIntegrationRepository> integrationRepository = new();
 
         identityRepository
-            .Setup(x => x.GetByIdAsync(id))
-            .ReturnsAsync(value: null);
+            .Setup(x => x.UpdateByIdAsync(
+                id,
+                It.IsAny<IEnumerable<PatchOperation>>()))
+            .ThrowsAsync(new IdentityNotFoundException(id));
 
         AssociationService associationService = new(
             logger.Object,
@@ -294,11 +295,11 @@ public class AssosciationServiceTests
             integrationRepository.Object);
 
         // Act
-        Identity? identity = await associationService.RemoveIntegrationAsync(
+        Task<Identity> identity() => associationService.RemoveIntegrationAsync(
             id,
             platform);
 
         // Assert
-        Assert.IsNull(identity);
+        await Assert.ThrowsExceptionAsync<IdentityNotFoundException>(identity);
     }
 }

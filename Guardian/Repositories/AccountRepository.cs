@@ -1,4 +1,5 @@
 ﻿using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -11,8 +12,9 @@ public interface IAccountRepository
     /// <param name="emailAddress">The unique email address for the account</param>
     /// <param name="passwordHashed">The account's password after being hashed</param>
     /// <param name="id">The ID of the identity if it already exists</param>
-    /// <returns></returns>
-    Task<Account?> CreateAsync(
+    /// <returns>The newly created account</returns>
+    /// <exception cref="AlreadyExistsException">Occurs when the account already exists</exception>
+    Task<Account> CreateAsync(
         string emailAddress,
         string passwordHashed,
         string? id = null);
@@ -22,7 +24,8 @@ public interface IAccountRepository
     /// </summary>
     /// <param name="id">The ID of the account to fetch</param>
     /// <returns>The associated account</returns>
-    Task<Account?> GetByIdAsync(string id);
+    /// <exception cref="AccountNotFoundException">Occurs when the account does not exist</exception>
+    Task<Account> GetByIdAsync(string id);
 
     /// <summary>
     /// Update an account by its ID.
@@ -30,7 +33,8 @@ public interface IAccountRepository
     /// <param name="id">The ID of the account to update</param>
     /// <param name="operations">The patch operations to perform</param>
     /// <returns>The updated account</returns>
-    Task<Account?> UpdateByIdAsync(
+    /// <exception cref="AccountNotFoundException">Occurs when the account does not exist</exception>
+    Task<Account> UpdateByIdAsync(
         string id,
         IEnumerable<PatchOperation> operations);
 
@@ -61,7 +65,7 @@ public class AccountRepository : IAccountRepository
         _cosmosClient = cosmosClient;
     }
     
-    public async Task<Account?> CreateAsync(
+    public async Task<Account> CreateAsync(
         string emailAddress,
         string passwordHashed,
         string? id = null)
@@ -81,7 +85,7 @@ public class AccountRepository : IAccountRepository
         {
             _logger.LogInformation("Failed to create new account with ID {id}", id);
 
-            return null;
+            throw new AlreadyExistsException();
         }
 
         _logger.LogInformation("Created new account with ID {id}", id);
@@ -89,7 +93,7 @@ public class AccountRepository : IAccountRepository
         return account;
     }
 
-    public async Task<Account?> GetByIdAsync(string id)
+    public async Task<Account> GetByIdAsync(string id)
     {
         Container container = await GetAccountContainer();
         
@@ -104,7 +108,7 @@ public class AccountRepository : IAccountRepository
                 "Unsuccessfully attempted to get the account with ID {id}",
                 id);
 
-            return null;
+            throw new AccountNotFoundException(id);
         }
 
         _logger.LogInformation("Fetched the account with ID {id}", id);
@@ -112,7 +116,7 @@ public class AccountRepository : IAccountRepository
         return account;
     }
     
-    public async Task<Account?> UpdateByIdAsync(
+    public async Task<Account> UpdateByIdAsync(
         string id,
         IEnumerable<PatchOperation> operations)
     {
@@ -133,7 +137,7 @@ public class AccountRepository : IAccountRepository
                 id,
                 string.Join(", ", operations.Select(o => o.Path)));
 
-            return null;
+            throw new AccountNotFoundException(id);
         }
 
         _logger.LogInformation(

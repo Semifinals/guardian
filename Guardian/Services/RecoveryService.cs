@@ -1,6 +1,7 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Utils;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Services;
 
@@ -12,7 +13,7 @@ public interface IRecoveryService
     /// <param name="identityId">The identity ID of the user to generate a code for</param>
     /// <param name="type">The type of code to generate</param>
     /// <returns>The generated recovery code</returns>
-    Task<RecoveryCode?> CreateCodeAsync(
+    Task<RecoveryCode> CreateCodeAsync(
         string identityId,
         string type);
 
@@ -35,7 +36,9 @@ public interface IRecoveryService
     /// <param name="emailAddress">The account's email address</param>
     /// <param name="recoveryCode">The recovery code used to validate the request</param>
     /// <returns>The updated account</returns>
-    Task<Account?> VerifyAccountAsync(
+    /// <exception cref="AccountNotFoundException">Occurs when the account doesn't exist</exception>
+    /// <exception cref="InvalidRecoveryCodeException">Occurs when the recovery code is invalid</exception>
+    Task<Account> VerifyAccountAsync(
         string identityId,
         string emailAddress,
         string recoveryCode);
@@ -47,7 +50,9 @@ public interface IRecoveryService
     /// <param name="newEmailAddress">The user's new email address</param>
     /// <param name="recoveryCode">The provided recovery code</param>
     /// <returns>The updated account</returns>
-    Task<Account?> ChangeEmailAddressAsync(
+    /// <exception cref="InvalidRecoveryCodeException">Occurs when the recovery code is invalid</exception>
+    /// <exception cref="EmailAddressAlreadyExistsException">Occurs when the new email address is already in use</exception>
+    Task<Account> ChangeEmailAddressAsync(
         string identityId,
         string newEmailAddress,
         string recoveryCode);
@@ -60,7 +65,9 @@ public interface IRecoveryService
     /// <param name="oldPassword">The user's old password</param>
     /// <param name="newPassword">The user's new password</param>
     /// <returns>The updated account</returns>
-    Task<Account?> ChangePasswordAsync(
+    /// <exception cref="AccountNotFoundException">Occurs when the account does not exist (should never occur)</exception>
+    /// <exception cref="InvalidPasswordException">Occurs when the old password is incorrect</exception>
+    Task<Account> ChangePasswordAsync(
         string identityId,
         string emailAddress,
         string oldPassword,
@@ -74,7 +81,9 @@ public interface IRecoveryService
     /// <param name="newPassword">The user's new password</param>
     /// <param name="recoveryCode">The provided recovery code</param>
     /// <returns>The updated account</returns>
-    Task<Account?> ResetPasswordAsync(
+    /// <exception cref="InvalidRecoveryCodeException">Occurs when the recovery code is invalid</exception>
+    /// <exception cref="AccountNotFoundException">Occurs when the account does not exist (should never occur)</exception>
+    Task<Account> ResetPasswordAsync(
         string identityId,
         string emailAddress,
         string newPassword,
@@ -86,7 +95,9 @@ public interface IRecoveryService
     /// <param name="identityId">The identity ID of the user to delete</param>
     /// <param name="recoveryCode">The provided recovery code</param>
     /// <returns>The deleted identity</returns>
-    Task<Identity?> DeleteByIdAsync(string identityId, string recoveryCode);
+    /// <exception cref="InvalidRecoveryCodeException">Occurs when the recovery code is invalid</exception>
+    /// <exception cref="IdentityNotFoundException">Occurs when the identity does not exist (should never occur)</exception>
+    Task<Identity> DeleteByIdAsync(string identityId, string recoveryCode);
 }
 
 public class RecoveryService : IRecoveryService
@@ -111,13 +122,13 @@ public class RecoveryService : IRecoveryService
         _recoveryCodeRepository = recoveryCodeRepository;
     }
 
-    public async Task<RecoveryCode?> CreateCodeAsync(
+    public async Task<RecoveryCode> CreateCodeAsync(
         string identityId,
         string type)
     {
         string code = Crypto.GenerateRandomString();
-        
-        RecoveryCode? recoveryCode = await _recoveryCodeRepository.CreateAsync(
+
+        RecoveryCode recoveryCode = await _recoveryCodeRepository.CreateAsync(
             identityId,
             code,
             type);
@@ -130,12 +141,17 @@ public class RecoveryService : IRecoveryService
         string type,
         string code)
     {
-        RecoveryCode? recoveryCode = await _recoveryCodeRepository.GetByIdAsync(
-            identityId,
-            type);
-
-        if (recoveryCode is null)
+        RecoveryCode recoveryCode;
+        try
+        {
+            recoveryCode = await _recoveryCodeRepository.GetByIdAsync(
+                identityId,
+                type);
+        }
+        catch (RecoveryCodeNotFoundException)
+        {
             return false;
+        }
 
         if (recoveryCode.Code != code)
             return false;
@@ -143,7 +159,7 @@ public class RecoveryService : IRecoveryService
         return true;
     }
 
-    public async Task<Account?> VerifyAccountAsync(
+    public async Task<Account> VerifyAccountAsync(
         string identityId,
         string emailAddress,
         string recoveryCode)
@@ -160,24 +176,27 @@ public class RecoveryService : IRecoveryService
                 "Unable to verify account {emailAddress} because the recovery code used was invalid",
                 emailAddress);
 
-            return null;
+            throw new InvalidRecoveryCodeException(recoveryCode);
         }
 
         // Verify account
-        Account? account = await _accountRepository.UpdateByIdAsync(
-            identityId,
-            new PatchOperation[]
-            {
-                PatchOperation.Replace("/verified", true)
-            });
-
-        if (account is null)
+        Account account;
+        try
+        {
+            account = await _accountRepository.UpdateByIdAsync(
+                identityId,
+                new PatchOperation[]
+                {
+                    PatchOperation.Replace("/verified", true)
+                });
+        }
+        catch (AccountNotFoundException ex)
         {
             _logger.LogInformation(
                 "Unable to verify account {emailAddress} because it does not exist",
                 emailAddress);
 
-            return null;
+            throw ex;
         }
 
         // Remove the used recovery code and respond with updated account
@@ -188,7 +207,7 @@ public class RecoveryService : IRecoveryService
         return account;
     }
 
-    public async Task<Account?> ChangeEmailAddressAsync(
+    public async Task<Account> ChangeEmailAddressAsync(
         string identityId,
         string newEmailAddress,
         string recoveryCode)
@@ -204,26 +223,29 @@ public class RecoveryService : IRecoveryService
             _logger.LogInformation(
                 "Unable to change account {identityId} email because the recovery code used was invalid",
                 identityId);
-            
-            return null;
+
+            throw new InvalidRecoveryCodeException(recoveryCode);
         }
 
         // Update email address associated with the account
-        Account? account = await _accountRepository.UpdateByIdAsync(
-            identityId,
-            new PatchOperation[]
-            {
-                PatchOperation.Replace("/emailAddress", newEmailAddress)
-            });
-
-        if (account is null)
+        Account account;
+        try
+        {
+            account = await _accountRepository.UpdateByIdAsync(
+                identityId,
+                new PatchOperation[]
+                {
+                    PatchOperation.Replace("/emailAddress", newEmailAddress)
+                });
+        }
+        catch (AccountNotFoundException)
         {
             _logger.LogInformation(
                 "Unable to change account {identityId} to {newEmailAddress} as it is already in use",
                 identityId,
                 newEmailAddress);
 
-            return null;
+            throw new EmailAddressAlreadyExistsException(newEmailAddress);
         }
 
         // Remove the used recovery code and respond with updated account
@@ -234,22 +256,25 @@ public class RecoveryService : IRecoveryService
         return account;
     }
 
-    public async Task<Account?> ChangePasswordAsync(
+    public async Task<Account> ChangePasswordAsync(
         string identityId,
         string emailAddress,
         string oldPassword,
         string newPassword)
     {
         // Fetch the account
-        Account? account = await _accountRepository.GetByIdAsync(identityId);
-
-        if (account is null)
+        Account account;
+        try
+        {
+            account = await _accountRepository.GetByIdAsync(identityId);
+        }
+        catch (AccountNotFoundException ex)
         {
             _logger.LogInformation(
                 "Unable to change account {emailAddress} password because it does not exist",
                 emailAddress);
 
-            return null;
+            throw ex;
         }
 
         // Check the old password is correct
@@ -261,7 +286,7 @@ public class RecoveryService : IRecoveryService
                 "Unable to change account {emailAddress} password because the old password is incorrect",
                 emailAddress);
 
-            return null;
+            throw new InvalidPasswordException(oldPassword);
         }
 
         // Update the password and return the updated account
@@ -277,7 +302,7 @@ public class RecoveryService : IRecoveryService
         return updatedAccount;
     }
 
-    public async Task<Account?> ResetPasswordAsync(
+    public async Task<Account> ResetPasswordAsync(
         string identityId,
         string emailAddress,
         string newPassword,
@@ -295,26 +320,29 @@ public class RecoveryService : IRecoveryService
                 "Unable to change account {emailAddress} email because the recovery code used was invalid",
                 emailAddress);
 
-            return null;
+            throw new InvalidRecoveryCodeException(recoveryCode);
         }
 
         // Reset password
         string passwordHashed = Crypto.Hash(newPassword);
-        
-        Account? account = await _accountRepository.UpdateByIdAsync(
-            identityId,
-            new PatchOperation[]
-            {
-                PatchOperation.Replace("/passwordHashed", passwordHashed)
-            });
 
-        if (account is null)
+        Account account;
+        try
+        {
+            account = await _accountRepository.UpdateByIdAsync(
+                identityId,
+                new PatchOperation[]
+                {
+                    PatchOperation.Replace("/passwordHashed", passwordHashed)
+                });
+        }
+        catch (AccountNotFoundException ex)
         {
             _logger.LogInformation(
                 "Unable to update password for account {emailAddress} because it does not exist",
                 emailAddress);
 
-            return null;
+            throw ex;
         }
 
         // Remove the used recovery code and respond with updated account
@@ -325,7 +353,7 @@ public class RecoveryService : IRecoveryService
         return account;
     }
 
-    public async Task<Identity?> DeleteByIdAsync(
+    public async Task<Identity> DeleteByIdAsync(
         string identityId,
         string recoveryCode)
     {
@@ -341,19 +369,22 @@ public class RecoveryService : IRecoveryService
                 "Unable to delete account {identityId} email because the recovery code used was invalid",
                 identityId);
 
-            return null;
+            throw new InvalidRecoveryCodeException(recoveryCode);
         }
 
         // Fetch integrations connected to the account
-        Identity? identity = await _identityRepository.GetByIdAsync(identityId);
-        
-        if (identity is null)
+        Identity identity;
+        try
+        {
+            identity = await _identityRepository.GetByIdAsync(identityId);
+        }
+        catch (IdentityNotFoundException ex)
         {
             _logger.LogCritical(
                 "Unable to delete account {identityId} email because their identity could not be found",
                 identityId);
 
-            return null;
+            throw ex;
         }
 
         List<(string, string)> integrationsToDelete = identity.Integrations

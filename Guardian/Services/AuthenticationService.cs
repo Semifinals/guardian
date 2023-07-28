@@ -1,6 +1,8 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Utils;
+using Semifinals.Guardian.Utils.Exceptions;
+using System.Security.Principal;
 
 namespace Semifinals.Guardian.Services;
 
@@ -13,7 +15,9 @@ public interface IAuthenticationService
     /// <param name="emailAddress">The user's email address</param>
     /// <param name="password">The user's password</param>
     /// <returns>The newly created account</returns>
-    Task<Account?> RegisterWithAccountAsync(string emailAddress, string password);
+    /// <exception cref="AlreadyExistsException">Occurs when the account is already in use</exception>
+    /// <exception cref="IdAlreadyExistsException">Occurs when the generated account ID is in use (should never occur)</exception>
+    Task<Account> RegisterWithAccountAsync(string emailAddress, string password);
 
     /// <summary>
     /// Register a new user through a third-party integration.
@@ -21,7 +25,9 @@ public interface IAuthenticationService
     /// <param name="platformId">The user's unique ID on the other platform</param>
     /// <param name="platform">The name of the platform registering through</param>
     /// <returns>The newly created integration</returns>
-    Task<Integration?> RegisterWithIntegrationAsync(string platformId, string platform);
+    /// <exception cref="IdAlreadyExistsException">Occurs when the generated identity ID is in use (should never occur)</exception>
+    /// <exception cref="AlreadyExistsException">Occurs when the integration is already in use</exception>
+    Task<Integration> RegisterWithIntegrationAsync(string platformId, string platform);
 }
 
 public class AuthenticationService : IAuthenticationService
@@ -43,30 +49,36 @@ public class AuthenticationService : IAuthenticationService
         _integrationRepository = integrationRepository;
     }
 
-    public async Task<Account?> RegisterWithAccountAsync(
+    public async Task<Account> RegisterWithAccountAsync(
         string emailAddress,
         string password)
     {
         // Create account
         string passwordHashed = Crypto.Hash(password);
-        
-        Account? account = await _accountRepository.CreateAsync(
-            emailAddress,
-            passwordHashed);
 
-        if (account is null)
+        Account account;
+        try
+        {
+            account = await _accountRepository.CreateAsync(
+                emailAddress,
+                passwordHashed);
+        }
+        catch (AlreadyExistsException ex)
         {
             _logger.LogInformation(
                 "Failed to create account {emailAddress} since it is already in use",
                 emailAddress);
 
-            return null;
+            throw ex;
         }
 
         // Create identity corresponding to account
-        Identity? identity = await _identityRepository.CreateAsync(account.Id);
-
-        if (identity is null)
+        Identity identity;
+        try
+        {
+            identity = await _identityRepository.CreateAsync(account.Id);
+        }
+        catch (IdAlreadyExistsException ex)
         {
             await _accountRepository.DeleteByIdAsync(account.Id);
 
@@ -75,7 +87,7 @@ public class AuthenticationService : IAuthenticationService
                 emailAddress,
                 account.Id);
 
-            return null;
+            throw ex;
         }
 
         // Return the newly created account
@@ -87,27 +99,33 @@ public class AuthenticationService : IAuthenticationService
         return account;
     }
 
-    public async Task<Integration?> RegisterWithIntegrationAsync(
+    public async Task<Integration> RegisterWithIntegrationAsync(
         string userId,
         string platform)
     {
         // Create identity
-        Identity? identity = await _identityRepository.CreateAsync();
-
-        if (identity is null)
+        Identity identity;
+        try
+        {
+            identity = await _identityRepository.CreateAsync();
+        }
+        catch (IdAlreadyExistsException ex)
         {
             _logger.LogCritical(
                 "Failed to create generic identity on behalf of new integration {userId} ({platform})",
                 userId,
                 platform);
 
-            return null;
+            throw ex;
         }
 
         // Create integration
-        Integration? integration = await _integrationRepository.CreateAsync(identity.Id, platform, userId);
-
-        if (integration is null)
+        Integration integration;
+        try
+        {
+            integration = await _integrationRepository.CreateAsync(identity.Id, platform, userId);
+        }
+        catch (AlreadyExistsException ex)
         {
             await _identityRepository.DeleteByIdAsync(identity.Id);
 
@@ -117,7 +135,7 @@ public class AuthenticationService : IAuthenticationService
                 userId,
                 platform);
 
-            return null;
+            throw ex;
         }
 
         // Link integration to account

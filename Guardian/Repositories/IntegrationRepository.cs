@@ -1,4 +1,5 @@
 ﻿using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -11,14 +12,16 @@ public interface IIntegrationRepository
     /// <param name="identityId">The ID of the associated identity</param>
     /// <param name="platform">The platform the integration comes from</param>
     /// <returns>The newly created integration</returns>
-    Task<Integration?> CreateAsync(string identityId, string platform, string userId);
+    /// <exception cref="AlreadyExistsException">Occurs when the integration already exists</exception>
+    Task<Integration> CreateAsync(string identityId, string platform, string userId);
 
     /// <summary>
     /// Get an integration by its ID.
     /// </summary>
     /// <param name="id">The composite ID of the integration to fetch</param>
     /// <returns>The requested integration</returns>
-    Task<Integration?> GetByIdAsync(string id);
+    /// <exception cref="IntegrationNotFoundException">Occurs when the integration does not exist</exception>
+    Task<Integration> GetByIdAsync(string id);
 
     /// <summary>
     /// Update a given integration by its ID.
@@ -26,7 +29,8 @@ public interface IIntegrationRepository
     /// <param name="id">The composite ID of the integration to update</param>
     /// <param name="operations">The patch operations to perform</param>
     /// <returns>The updated integration</returns>
-    Task<Integration?> UpdateByIdAsync(
+    /// <exception cref="IntegrationNotFoundException">Occurs when the integration does not exist</exception>
+    Task<Integration> UpdateByIdAsync(
         string id,
         IEnumerable<PatchOperation> operations);
 
@@ -56,7 +60,7 @@ public class IntegrationRepository : IIntegrationRepository
         _cosmosClient = cosmosClient;
     }
     
-    public async Task<Integration?> CreateAsync(string identityId, string platform, string userId)
+    public async Task<Integration> CreateAsync(string identityId, string platform, string userId)
     {
         Container container = await GetIntegrationContainer();
 
@@ -73,7 +77,7 @@ public class IntegrationRepository : IIntegrationRepository
         {
             _logger.LogInformation("Failed to create new integration with ID {id}", id);
 
-            return null;
+            throw new AlreadyExistsException();
         }
 
         _logger.LogInformation("Created new integration with ID {id}", id);
@@ -81,7 +85,7 @@ public class IntegrationRepository : IIntegrationRepository
         return integration;
     }
     
-    public async Task<Integration?> GetByIdAsync(string id)
+    public async Task<Integration> GetByIdAsync(string id)
     {
         Container container = await GetIntegrationContainer();
         
@@ -96,7 +100,7 @@ public class IntegrationRepository : IIntegrationRepository
                 "Unsuccessfully attempted to get the integration with ID {id}",
                 id);
 
-            return null;
+            throw new IntegrationNotFoundException(id);
         }
 
         _logger.LogInformation("Fetched the integration with ID {id}", id);
@@ -104,7 +108,7 @@ public class IntegrationRepository : IIntegrationRepository
         return integration;
     }
     
-    public async Task<Integration?> UpdateByIdAsync(
+    public async Task<Integration> UpdateByIdAsync(
         string id,
         IEnumerable<PatchOperation> operations)
     {
@@ -125,7 +129,7 @@ public class IntegrationRepository : IIntegrationRepository
                 id,
                 string.Join(", ", operations.Select(o => o.Path)));
 
-            return null;
+            throw new IntegrationNotFoundException(id);
         }
 
         _logger.LogInformation(

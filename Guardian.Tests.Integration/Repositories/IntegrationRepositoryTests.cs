@@ -1,5 +1,6 @@
 ﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -41,13 +42,12 @@ public class IntegrationRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Integration? res = await integrationRepository.CreateAsync(
+        Integration res = await integrationRepository.CreateAsync(
             identityId,
             platform,
             userId);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(integration.Id, res.Id);
     }
     
@@ -81,13 +81,13 @@ public class IntegrationRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Integration? res = await integrationRepository.CreateAsync(
+        Task<Integration> res() => integrationRepository.CreateAsync(
             identityId,
             platform,
             userId);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<AlreadyExistsException>(res);
     }
 
     [TestMethod]
@@ -125,10 +125,9 @@ public class IntegrationRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Integration? res = await integrationRepository.GetByIdAsync(id);
+        Integration res = await integrationRepository.GetByIdAsync(id);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(integration.Id, res.Id);
     }
 
@@ -158,10 +157,10 @@ public class IntegrationRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Integration? res = await integrationRepository.GetByIdAsync(id);
+        Task<Integration> res() => integrationRepository.GetByIdAsync(id);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<IntegrationNotFoundException>(res);
     }
 
     [TestMethod]
@@ -205,10 +204,9 @@ public class IntegrationRepositoryTests
         };
 
         // Act
-        Integration? res = await integrationRepository.UpdateByIdAsync(id, operations);
+        Integration res = await integrationRepository.UpdateByIdAsync(id, operations);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(integration.Id, res.Id);
     }
 
@@ -244,10 +242,10 @@ public class IntegrationRepositoryTests
         };
 
         // Act
-        Integration? res = await integrationRepository.UpdateByIdAsync(id, operations);
+        Task<Integration> res() => integrationRepository.UpdateByIdAsync(id, operations);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<IntegrationNotFoundException>(res);
     }
 
     [TestMethod]

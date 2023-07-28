@@ -1,5 +1,6 @@
 ﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -37,10 +38,9 @@ public class IdentityRepositoryTests
             cosmosClient.Object);
         
         // Act
-        Identity? res = await identityRepository.CreateAsync();
+        Identity res = await identityRepository.CreateAsync();
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(identity.Id, res.Id);
     }
 
@@ -76,10 +76,9 @@ public class IdentityRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Identity? res = await identityRepository.CreateAsync(id);
+        Identity res = await identityRepository.CreateAsync(id);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(identity.Id, res.Id);
     }
 
@@ -108,12 +107,12 @@ public class IdentityRepositoryTests
         IdentityRepository identityRepository = new(
             logger.Object,
             cosmosClient.Object);
-
+        
         // Act
-        Identity? res = await identityRepository.CreateAsync(id);
+        Task<Identity> res() => identityRepository.CreateAsync(id);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<IdAlreadyExistsException>(res);
     }
 
     [TestMethod]
@@ -148,10 +147,9 @@ public class IdentityRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Identity? res = await identityRepository.GetByIdAsync(id);
+        Identity res = await identityRepository.GetByIdAsync(id);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(identity.Id, res.Id);        
     }
 
@@ -181,10 +179,10 @@ public class IdentityRepositoryTests
             cosmosClient.Object);
 
         // Act
-        Identity? res = await identityRepository.GetByIdAsync(id);
+        Task<Identity> res() => identityRepository.GetByIdAsync(id);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<IdentityNotFoundException>(res);
     }
 
     [TestMethod]
@@ -225,10 +223,9 @@ public class IdentityRepositoryTests
         };
         
         // Act
-        Identity? res = await identityRepository.UpdateByIdAsync(id, operations);
+        Identity res = await identityRepository.UpdateByIdAsync(id, operations);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(identity.Id, res.Id);
     }
 
@@ -264,10 +261,10 @@ public class IdentityRepositoryTests
         };
 
         // Act
-        Identity? res = await identityRepository.UpdateByIdAsync(id, operations);
+        Task<Identity> res() => identityRepository.UpdateByIdAsync(id, operations);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<IdentityNotFoundException>(res);
     }
 
     [TestMethod]

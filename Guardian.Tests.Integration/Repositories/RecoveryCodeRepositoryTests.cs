@@ -1,5 +1,6 @@
 ﻿using Semifinals.Guardian.Mocks;
 using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -84,10 +85,9 @@ public class RecoveryCodeRepositoryTests
             cosmosClient.Object);
 
         // Act
-        RecoveryCode? res = await recoveryCodeRepository.GetByIdAsync(id, type);
+        RecoveryCode res = await recoveryCodeRepository.GetByIdAsync(id, type);
 
         // Assert
-        Assert.IsNotNull(res);
         Assert.AreEqual(recoveryCode.Code, res.Code);
     }
 
@@ -118,10 +118,10 @@ public class RecoveryCodeRepositoryTests
             cosmosClient.Object);
 
         // Act
-        RecoveryCode? res = await recoveryCodeRepository.GetByIdAsync(id, type);
+        Task<RecoveryCode> res() => recoveryCodeRepository.GetByIdAsync(id, type);
 
         // Assert
-        Assert.IsNull(res);
+        await Assert.ThrowsExceptionAsync<RecoveryCodeNotFoundException>(res);
     }
 
     [TestMethod]

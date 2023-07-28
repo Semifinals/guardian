@@ -1,4 +1,5 @@
 ﻿using Semifinals.Guardian.Models;
+using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Repositories;
 
@@ -9,14 +10,16 @@ public interface IIdentityRepository
     /// for a new first-party account.
     /// </summary>
     /// <returns>The newly created identity</returns>
-    Task<Identity?> CreateAsync(string? id = null);
+    /// <exception cref="IdAlreadyExistsException">Occurs when the ID is already in use</exception>
+    Task<Identity> CreateAsync(string? id = null);
 
     /// <summary>
     /// Get an identity by its ID.
     /// </summary>
     /// <param name="id">The ID to fetch by</param>
     /// <returns>The requested identity</returns>
-    Task<Identity?> GetByIdAsync(string id);
+    /// <exception cref="IdentityNotFoundException">Occurs when the identity does not exist</exception>
+    Task<Identity> GetByIdAsync(string id);
 
     /// <summary>
     /// Update an identity by its ID.
@@ -24,7 +27,8 @@ public interface IIdentityRepository
     /// <param name="id">The ID of the identity to update</param>
     /// <param name="operations">The patch operations to perform</param>
     /// <returns>The updated identity</returns>
-    Task<Identity?> UpdateByIdAsync(
+    /// <exception cref="IdentityNotFoundException">Occurs when the identity does not exist</exception>
+    Task<Identity> UpdateByIdAsync(
         string id,
         IEnumerable<PatchOperation> operations);
 
@@ -54,7 +58,7 @@ public class IdentityRepository : IIdentityRepository
         _cosmosClient = cosmosClient;
     }
 
-    public async Task<Identity?> CreateAsync(string? id = null)
+    public async Task<Identity> CreateAsync(string? id = null)
     {
         Container container = await GetIdentityContainer();
         
@@ -69,7 +73,7 @@ public class IdentityRepository : IIdentityRepository
         {
             _logger.LogInformation("Failed to create new identity with ID {id}", id);
 
-            return null;
+            throw new IdAlreadyExistsException(id);
         }
 
         _logger.LogInformation("Created new identity with ID {id}", id);
@@ -77,7 +81,7 @@ public class IdentityRepository : IIdentityRepository
         return identity;
     }
 
-    public async Task<Identity?> GetByIdAsync(string id)
+    public async Task<Identity> GetByIdAsync(string id)
     {
         Container container = await GetIdentityContainer();
         
@@ -92,7 +96,7 @@ public class IdentityRepository : IIdentityRepository
                 "Unsuccessfully attempted to get the identity with ID {id}",
                 id);
 
-            return null;
+            throw new IdentityNotFoundException(id);
         }
         
         _logger.LogInformation("Fetched the identity with ID {id}", id);
@@ -100,7 +104,7 @@ public class IdentityRepository : IIdentityRepository
         return identity;
     }
 
-    public async Task<Identity?> UpdateByIdAsync(
+    public async Task<Identity> UpdateByIdAsync(
         string id,
         IEnumerable<PatchOperation> operations)
     {
@@ -120,8 +124,8 @@ public class IdentityRepository : IIdentityRepository
                 "Unsuccessfully attempted to update the identity with ID {id} changing the following properties: {properties}",
                 id,
                 string.Join(", ", operations.Select(o => o.Path)));
-            
-            return null;
+
+            throw new IdentityNotFoundException(id);
         }
 
         _logger.LogInformation(
