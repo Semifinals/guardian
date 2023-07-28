@@ -43,4 +43,28 @@ public class CryptoTests
         // Assert
         Assert.IsFalse(valid);
     }
+
+    [TestMethod]
+    public void GenerateRandomString_GeneratesStringWithEvenLength()
+    {
+        // Arrange
+
+        // Act
+        string randomString = Crypto.GenerateRandomString(10);
+
+        // Assert
+        Assert.AreEqual(10, randomString.Length);
+    }
+
+    [TestMethod]
+    public void GenerateRandomString_GeneratesStringWithOddLength()
+    {
+        // Arrange
+
+        // Act
+        string randomString = Crypto.GenerateRandomString(11);
+
+        // Assert
+        Assert.AreEqual(11, randomString.Length);
+    }
 }

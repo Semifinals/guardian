@@ -11,21 +11,23 @@ public interface IRecoveryCodeRepository
     /// <param name="code">The recovery code</param>
     /// <param name="type">The type of recovery it can perform</param>
     /// <returns>The newly created recovery code</returns>
-    Task<RecoveryCode> CreateAsync(string id, string code, string type);
+    Task<RecoveryCode> CreateAsync(string identityId, string code, string type);
 
     /// <summary>
     /// Fetch a recovery code to see if it exists and can be used.
     /// </summary>
-    /// <param name="id">The ID of the identity the code is for</param>
+    /// <param name="identityId">The ID of the identity the code is for</param>
+    /// <param name="type">The type of recovery it can perform</param>
     /// <returns>The requested recovery code if it exists</returns>
-    Task<RecoveryCode?> GetByIdAsync(string id);
+    Task<RecoveryCode?> GetByIdAsync(string identityId, string type);
 
     /// <summary>
     /// Delete a recovery code by the given ID.
     /// </summary>
-    /// <param name="id">The ID of the identity the code is for</param>
+    /// <param name="identityId">The ID of the identity the code is for</param>
+    /// <param name="type">The type of recovery it can perform</param>
     /// <returns>A task which resolves when the recovery code is deleted</returns>
-    Task DeleteByIdAsync(string id);
+    Task DeleteByIdAsync(string identityId, string type);
 }
 
 public class RecoveryCodeRepository : IRecoveryCodeRepository
@@ -38,6 +40,7 @@ public class RecoveryCodeRepository : IRecoveryCodeRepository
         return _cosmosClient.UseContainer(
             "identity-db",
             "recoveryCodes",
+            partitionKeyPath: "/identityId",
             defaultTimeToLive: 3600);
     }
 
@@ -48,22 +51,22 @@ public class RecoveryCodeRepository : IRecoveryCodeRepository
     }
 
     public async Task<RecoveryCode> CreateAsync(
-        string id,
+        string identityId,
         string code,
         string type)
     {
         Container container = await GetRepositoryCodeContainer();
         
         RecoveryCode recoveryCode = await container.UpsertItemAsync<RecoveryCode>(
-            new(id, code, type),
-            new(id));
+            new(identityId, code, type),
+            new(identityId));
 
-        _logger.LogInformation("Created new recovery code for ID {id}", id);
+        _logger.LogInformation("Created new recovery code for ID {id}", identityId);
 
         return recoveryCode;
     }
 
-    public async Task<RecoveryCode?> GetByIdAsync(string id)
+    public async Task<RecoveryCode?> GetByIdAsync(string identityId, string type)
     {
         Container container = await GetRepositoryCodeContainer();
         
@@ -71,31 +74,35 @@ public class RecoveryCodeRepository : IRecoveryCodeRepository
         try
         {
             recoveryCode = await container.ReadItemAsync<RecoveryCode>(
-                id,
-                new(id));
+                RecoveryCode.GetCompositeId(identityId, type),
+                new(identityId));
         }
         catch (CosmosException)
         {
             _logger.LogInformation(
                 "Unsuccessfully attempted to fetch the recovery for ID {id}",
-                id);
+                identityId);
 
             return null;
         }
 
         _logger.LogInformation(
                "Successfully fetched the recovery code for ID {id}",
-               id);
+               identityId);
 
         return recoveryCode;
     }
 
-    public async Task DeleteByIdAsync(string id)
+    public async Task DeleteByIdAsync(string identityId, string type)
     {
         Container container = await GetRepositoryCodeContainer();
         
-        await container.DeleteItemAsync<RecoveryCode>(id, new(id));
+        await container.DeleteItemAsync<RecoveryCode>(
+            RecoveryCode.GetCompositeId(identityId, type),
+            new(identityId));
 
-        _logger.LogInformation("Deleted the recovery code for ID {id}", id);
+        _logger.LogInformation(
+            "Deleted the recovery code for ID {id}",
+            identityId);
     }
 }

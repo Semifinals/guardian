@@ -55,8 +55,9 @@ public class RecoveryCodeRepositoryTests
     {
         // Arrange
         string id = "id";
+        string type = "email";
         
-        RecoveryCode recoveryCode = new(id, "code", "email");
+        RecoveryCode recoveryCode = new(id, "code", type);
 
         Mock<ILogger> logger = new();
         
@@ -70,7 +71,7 @@ public class RecoveryCodeRepositoryTests
 
                 container
                     .Setup(x => x.ReadItemAsync<RecoveryCode>(
-                        id,
+                        It.IsAny<string>(),
                         It.IsAny<PartitionKey>(),
                         null,
                         default))
@@ -83,7 +84,7 @@ public class RecoveryCodeRepositoryTests
             cosmosClient.Object);
 
         // Act
-        RecoveryCode? res = await recoveryCodeRepository.GetByIdAsync(id);
+        RecoveryCode? res = await recoveryCodeRepository.GetByIdAsync(id, type);
 
         // Assert
         Assert.IsNotNull(res);
@@ -95,6 +96,7 @@ public class RecoveryCodeRepositoryTests
     {
         // Arrange
         string id = "id";
+        string type = "email";
 
         Mock<ILogger> logger = new();
 
@@ -103,7 +105,7 @@ public class RecoveryCodeRepositoryTests
             {
                 container
                     .Setup(x => x.ReadItemAsync<RecoveryCode>(
-                        id,
+                        It.IsAny<string>(),
                         It.IsAny<PartitionKey>(),
                         null,
                         default))
@@ -116,7 +118,7 @@ public class RecoveryCodeRepositoryTests
             cosmosClient.Object);
 
         // Act
-        RecoveryCode? res = await recoveryCodeRepository.GetByIdAsync(id);
+        RecoveryCode? res = await recoveryCodeRepository.GetByIdAsync(id, type);
 
         // Assert
         Assert.IsNull(res);
@@ -127,6 +129,7 @@ public class RecoveryCodeRepositoryTests
     {
         // Arrange
         string id = "id";
+        string type = "type";
 
         Mock<ILogger> logger = new();
 
@@ -140,7 +143,7 @@ public class RecoveryCodeRepositoryTests
                 
                 container
                     .Setup(x => x.DeleteItemAsync<RecoveryCode>(
-                        id,
+                        It.IsAny<string>(),
                         It.IsAny<PartitionKey>(),
                         null,
                         default))
@@ -153,7 +156,7 @@ public class RecoveryCodeRepositoryTests
             cosmosClient.Object);
 
         // Act
-        await recoveryCodeRepository.DeleteByIdAsync(id);
+        await recoveryCodeRepository.DeleteByIdAsync(id, type);
 
         // Assert
 

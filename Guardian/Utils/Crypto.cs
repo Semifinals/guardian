@@ -24,4 +24,20 @@ public class Crypto
     {
         return crypto.Verify(value, hash);
     }
+
+    /// <summary>
+    /// Generate a cryptographically secure string.
+    /// </summary>
+    /// <param name="length">The expected length of the result</param>
+    /// <returns>The generated string</returns>
+    public static string GenerateRandomString(int length = 64)
+    {
+        string randomSecureString = Convert.ToHexString(
+            RandomNumberGenerator.GetBytes((length + 1) / 2));
+
+        if (length % 2 == 1)
+            randomSecureString = randomSecureString[..^1];
+        
+        return randomSecureString;
+    }
 }
