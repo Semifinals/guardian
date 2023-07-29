@@ -1,4 +1,10 @@
-﻿global using Microsoft.Azure.Cosmos;
+﻿global using FluentValidation;
+global using FluentValidation.Results;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.Mvc;
+global using Microsoft.Azure.Cosmos;
+global using Microsoft.Azure.WebJobs;
+global using Microsoft.Azure.WebJobs.Extensions.Http;
 global using Microsoft.Extensions.Logging;
 global using shortid;
 global using System;
@@ -11,3 +17,4 @@ global using System.Text;
 global using System.Text.Json;
 global using System.Text.Json.Serialization;
 global using System.Threading.Tasks;
+global using System.Web.Http;
