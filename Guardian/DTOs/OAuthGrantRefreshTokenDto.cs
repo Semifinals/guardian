@@ -3,23 +3,13 @@
 public class OAuthGrantRefreshTokenDto
 {
     [JsonPropertyName("grant_type")]
-    public string GrantType;
+    public string GrantType { get; set; } = null!;
 
     [JsonPropertyName("refresh_token")]
-    public string RefreshToken;
+    public string RefreshToken { get; set; } = null!;
 
     [JsonPropertyName("scope")]
-    public string? Scope;
-
-    public OAuthGrantRefreshTokenDto(
-        string grantType,
-        string refreshToken,
-        string? scope)
-    {
-        GrantType = grantType;
-        RefreshToken = refreshToken;
-        Scope = scope;
-    }
+    public string? Scope { get; set; }
 }
 
 public class OAuthGrantRefreshTokenDtoValidator
@@ -28,7 +18,7 @@ public class OAuthGrantRefreshTokenDtoValidator
     public OAuthGrantRefreshTokenDtoValidator()
     {
         RuleFor(x => x.GrantType)
-            .Equal("client_credentials");
+            .Equal("refresh_token");
 
         RuleFor(x => x.RefreshToken)
             .NotEmpty();

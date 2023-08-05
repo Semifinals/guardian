@@ -3,34 +3,19 @@
 public class OAuthResponseCodeDto
 {
     [JsonPropertyName("response_type")]
-    public string ResponseType;
+    public string ResponseType { get; set; } = null!;
 
     [JsonPropertyName("client_id")]
-    public string ClientId;
+    public string ClientId { get; set; } = null!;
 
     [JsonPropertyName("redirect_uri")]
-    public string? RedirectUri;
+    public string? RedirectUri { get; set; }
 
     [JsonPropertyName("scope")]
-    public string? Scope;
+    public string? Scope { get; set; }
 
     [JsonPropertyName("state")]
-    public string? State;
-
-    public OAuthResponseCodeDto(
-        string responseType,
-        string clientId,
-        string? redirectUri,
-        string? scope,
-        string? state)
-    {
-        ResponseType = responseType;
-        ClientId = clientId;
-        RedirectUri = redirectUri;
-        Scope = scope;
-        State = state;
-    }
-    
+    public string? State { get; set; }
 }
 
 public class OAuthResponseCodeDtoValidator

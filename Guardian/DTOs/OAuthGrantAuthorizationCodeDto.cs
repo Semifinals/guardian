@@ -3,28 +3,16 @@
 public class OAuthGrantAuthorizationCodeDto
 {
     [JsonPropertyName("grant_type")]
-    public string GrantType;
+    public string GrantType { get; set; } = null!;
 
     [JsonPropertyName("code")]
-    public string Code;
+    public string Code { get; set; } = null!;
 
     [JsonPropertyName("client_id")]
-    public string ClientId;
+    public string ClientId { get; set; } = null!;
 
     [JsonPropertyName("redirect_uri")]
-    public string? RedirectUri;
-
-    public OAuthGrantAuthorizationCodeDto(
-        string grantType,
-        string code,
-        string clientId,
-        string? redirectUri)
-    {
-        GrantType = grantType;
-        Code = code;
-        ClientId = clientId;
-        RedirectUri = redirectUri;
-    }
+    public string? RedirectUri { get; set; }
 }
 
 public class OAuthGrantAuthorizationCodeDtoValidator

@@ -3,28 +3,16 @@
 public class OAuthGrantPasswordDto
 {
     [JsonPropertyName("grant_type")]
-    public string GrantType;
+    public string GrantType { get; set; } = null!;
 
     [JsonPropertyName("username")]
-    public string Username;
+    public string Username { get; set; } = null!;
 
     [JsonPropertyName("password")]
-    public string Password;
+    public string Password { get; set; } = null!;
 
     [JsonPropertyName("scope")]
-    public string? Scope;
-
-    public OAuthGrantPasswordDto(
-        string grantType,
-        string username,
-        string password,
-        string? scope)
-    {
-        GrantType = grantType;
-        Username = username;
-        Password = password;
-        Scope = scope;
-    }
+    public string? Scope { get; set; }
 }
 
 public class OAuthGrantPasswordDtoValidator

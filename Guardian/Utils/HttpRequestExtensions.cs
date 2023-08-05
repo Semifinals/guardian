@@ -12,7 +12,7 @@ public static class HttpRequestExtensions
     public static async Task<T> GetJsonBody<T>(this HttpRequest req)
     {
         var requestBody = await req.ReadAsStringAsync();
-        
+
         T? requestObject = JsonSerializer.Deserialize<T>(requestBody);
 
         if (requestObject is null)

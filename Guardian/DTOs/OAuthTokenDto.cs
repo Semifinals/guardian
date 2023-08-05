@@ -3,16 +3,10 @@
 public class OAuthTokenDto
 {
     [JsonPropertyName("grant_type")]
-    public string? GrantType { get; }
+    public string? GrantType { get; set; }
 
     [JsonPropertyName("response_type")]
-    public string? ResponseType { get; }
-
-    public OAuthTokenDto(string? grantType, string? responseType)
-    {
-        GrantType = grantType;
-        ResponseType = responseType;
-    }
+    public string? ResponseType { get; set; }
 }
 
 public class OAuthTokenDtoValidator : AbstractValidator<OAuthTokenDto>

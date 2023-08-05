@@ -3,18 +3,10 @@
 public class OAuthGrantClientCredentialsDto
 {
     [JsonPropertyName("grant_type")]
-    public string GrantType;
+    public string GrantType { get; set; } = null!;
 
     [JsonPropertyName("scope")]
-    public string? Scope;
-
-    public OAuthGrantClientCredentialsDto(
-        string grantType,
-        string? scope)
-    {
-        GrantType = grantType;
-        Scope = scope;
-    }
+    public string? Scope { get; set; }
 }
 
 public class OAuthGrantClientCredentialsDtoValidator
