@@ -20,6 +20,7 @@ public class RecoveryCode
     /// <summary>
     /// The associated identity that the code is for.
     /// </summary>
+    [JsonPropertyName("identityId")]
     public string IdentityId { get; }
 
     /// <summary>

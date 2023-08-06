@@ -8,7 +8,7 @@ public interface IRecoveryCodeRepository
     /// <summary>
     /// Create a new recovery code.
     /// </summary>
-    /// <param name="id">The ID of the identity the code is for</param>
+    /// <param name="identityId">The ID of the identity the code is for</param>
     /// <param name="code">The recovery code</param>
     /// <param name="type">The type of recovery it can perform</param>
     /// <returns>The newly created recovery code</returns>

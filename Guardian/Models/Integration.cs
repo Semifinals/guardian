@@ -27,6 +27,7 @@ public class Integration
     /// <summary>
     /// The user's unique identifier from the platform.
     /// </summary>
+    [JsonPropertyName("userId")]
     public string UserId { get; }
 
     public Integration(
