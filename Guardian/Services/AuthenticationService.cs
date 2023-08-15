@@ -2,7 +2,6 @@
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Utils;
 using Semifinals.Guardian.Utils.Exceptions;
-using System.Security.Principal;
 
 namespace Semifinals.Guardian.Services;
 
@@ -19,6 +18,15 @@ public interface IAuthenticationService
     /// <exception cref="IdAlreadyExistsException">Occurs when the generated account ID is in use (should never occur)</exception>
     Task<Account> RegisterWithAccountAsync(string emailAddress, string password);
 
+    /// <summary>
+    /// Login with a first-party account.
+    /// </summary>
+    /// <param name="emailAddress">The user's email address</param>
+    /// <param name="password">The user's password</param>
+    /// <returns>The user's account</returns>
+    /// <exception cref="AccountNotFoundException">Occurs when the account doesn't exist</exception>
+    Task<Account> LoginWithAccountAsync(string emailAddress, string password);
+        
     /// <summary>
     /// Register a new user through a third-party integration.
     /// </summary>
@@ -96,6 +104,21 @@ public class AuthenticationService : IAuthenticationService
             emailAddress,
             account.Id);
 
+        return account;
+    }
+
+    public async Task<Account> LoginWithAccountAsync(
+        string emailAddress,
+        string password)
+    {
+        // Get account
+        Account account = await _accountRepository.GetByEmailAddressAsync(emailAddress);
+
+        // Verify password
+        if (!Crypto.Verify(password, account.PasswordHashed))
+            throw new AccountNotFoundException(emailAddress);
+
+        // Return on valid request
         return account;
     }
 

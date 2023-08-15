@@ -28,6 +28,14 @@ public interface IAccountRepository
     Task<Account> GetByIdAsync(string id);
 
     /// <summary>
+    /// Get an account by its email address.
+    /// </summary>
+    /// <param name="emailAddress">The email address of the account to fetch</param>
+    /// <returns>The associated account</returns>
+    /// <exception cref="AccountNotFoundException">Occurs when the account does not exist</exception>
+    Task<Account> GetByEmailAddressAsync(string emailAddress);
+
+    /// <summary>
     /// Update an account by its ID.
     /// </summary>
     /// <param name="id">The ID of the account to update</param>
@@ -113,6 +121,38 @@ public class AccountRepository : IAccountRepository
 
         _logger.LogInformation("Fetched the account with ID {id}", id);
         
+        return account;
+    }
+
+    public async Task<Account> GetByEmailAddressAsync(string emailAddress)
+    {
+        Container container = await GetAccountContainer();
+
+        Account account;
+        try
+        {
+            QueryDefinition query = new QueryDefinition(
+                "SELECT * FROM accounts a WHERE a.emailAddress = @emailAddress")
+                .WithParameter("@emailAddress", emailAddress);
+
+            using FeedIterator<Account> feed = container.GetItemQueryIterator<Account>(query);
+            
+            FeedResponse<Account> response = await feed.ReadNextAsync();
+            account = response.Resource.First();
+        }
+        catch (Exception)
+        {
+            _logger.LogInformation(
+                "Unsuccessfully attempted to get the account with email {email}",
+                emailAddress);
+
+            throw new AccountNotFoundException(emailAddress);
+        }
+
+        _logger.LogInformation(
+            "Fetched the account with email {email}",
+            emailAddress);
+
         return account;
     }
     

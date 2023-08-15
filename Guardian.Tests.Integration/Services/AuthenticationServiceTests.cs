@@ -1,5 +1,6 @@
 ﻿using Semifinals.Guardian.Models;
 using Semifinals.Guardian.Repositories;
+using Semifinals.Guardian.Utils;
 using Semifinals.Guardian.Utils.Exceptions;
 
 namespace Semifinals.Guardian.Services;
@@ -79,6 +80,70 @@ public class AuthenticationServiceTests
         // Assert
         await Assert.ThrowsExceptionAsync<AlreadyExistsException>(account);
     }
+
+    [TestMethod]
+    public async Task LoginWithAccountAsync_LogsIntoExistingAccount()
+    {
+        // Arrange
+        string id = "id";
+        string emailAddress = "user@example.com";
+        string password = "password";
+        string passwordHashed = Crypto.Hash(password);
+
+        Mock<ILogger> logger = new();
+        Mock<IAccountRepository> accountRepository = new();
+        Mock<IIdentityRepository> identityRepository = new();
+        Mock<IIntegrationRepository> integrationRepository = new();
+
+        accountRepository
+            .Setup(x => x.GetByEmailAddressAsync(emailAddress))
+            .ReturnsAsync(new Account(id, emailAddress, passwordHashed, false));
+
+        AuthenticationService authenticationService = new(
+            logger.Object,
+            accountRepository.Object,
+            identityRepository.Object,
+            integrationRepository.Object);
+
+        // Act
+        Account account = await authenticationService.LoginWithAccountAsync(
+            emailAddress,
+            password);
+
+        // Assert
+        Assert.AreEqual(id, account.Id);
+    }
+
+    [TestMethod]
+    public async Task LoginWithAccountAsync_FailsOnNonExistentAccount()
+    {
+        // Arrange
+        string emailAddress = "user@example.com";
+        string password = "password";
+        
+        Mock<ILogger> logger = new();
+        Mock<IAccountRepository> accountRepository = new();
+        Mock<IIdentityRepository> identityRepository = new();
+        Mock<IIntegrationRepository> integrationRepository = new();
+
+        accountRepository
+            .Setup(x => x.GetByEmailAddressAsync(emailAddress))
+            .ThrowsAsync(new AccountNotFoundException(emailAddress));
+
+        AuthenticationService authenticationService = new(
+            logger.Object,
+            accountRepository.Object,
+            identityRepository.Object,
+            integrationRepository.Object);
+
+        // Act
+        Task<Account> account() => authenticationService.LoginWithAccountAsync(
+            emailAddress,
+            password);
+        
+        // Assert
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(account);
+    }    
 
     [TestMethod]
     public async Task RegisterWithIntegrationAsync_RegistersNewIntegration()

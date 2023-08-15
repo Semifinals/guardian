@@ -185,8 +185,6 @@ public class AccountRepositoryTests
 
         Mock<ILogger> logger = new();
 
-        
-
         Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
             .SetupContainer(container =>
             {
@@ -206,6 +204,97 @@ public class AccountRepositoryTests
         
         // Act
         Task<Account> res() => accountRepository.GetByIdAsync(id);
+
+        // Assert
+        await Assert.ThrowsExceptionAsync<AccountNotFoundException>(res);
+    }
+
+    [TestMethod]
+    public async Task GetByEmailAddressAsync_GetsExistingAccount()
+    {
+        // Arrange
+        string id = "test";
+        string emailAddress = "user@example.com";
+        string passwordHashed = "abcd";
+        bool verified = false;
+
+        Account account = new(id, emailAddress, passwordHashed, verified);
+
+        Mock<ILogger> logger = new();
+
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                IEnumerable<Account> accounts = new Account[] { account };
+                
+                Mock<FeedResponse<Account>> feedResponse = new();
+                feedResponse
+                    .Setup(x => x.Resource)
+                    .Returns(accounts);
+
+                Mock<FeedIterator<Account>> feedIterator = new();
+                feedIterator
+                    .Setup(x => x.ReadNextAsync(default))
+                    .ReturnsAsync(feedResponse.Object);
+
+                container
+                    .Setup(x => x.GetItemQueryIterator<Account>(
+                        It.IsAny<QueryDefinition>(),
+                        null,
+                        null))
+                    .Returns(feedIterator.Object);
+            })
+            .Create();
+
+        AccountRepository accountRepository = new(
+            logger.Object,
+            cosmosClient.Object);
+
+        // Act
+        Account res = await accountRepository.GetByEmailAddressAsync(emailAddress);
+
+        // Assert
+        Assert.AreEqual(account.Id, res.Id);
+    }
+
+    [TestMethod]
+    public async Task GetByEmailAddressAsync_FailsGettingNonExistentAccount()
+    {
+        // Arrange
+        string emailAddress = "user@example.com";
+
+        Mock<ILogger> logger = new();
+        
+        Mock<CosmosClient> cosmosClient = new CosmosClientMockBuilder()
+            .SetupContainer(container =>
+            {
+                IEnumerable<Account> accounts = Array.Empty<Account>();
+
+                Mock<FeedResponse<Account>> feedResponse = new();
+                feedResponse
+                    .Setup(x => x.Resource)
+                    .Returns(accounts);
+
+                Mock<FeedIterator<Account>> feedIterator = new();
+                feedIterator
+                    .Setup(x => x.ReadNextAsync(default))
+                    .ReturnsAsync(feedResponse.Object);
+
+                container
+                    .Setup(x => x.GetItemQueryIterator<Account>(
+                        It.IsAny<QueryDefinition>(),
+                        null,
+                        null))
+                    .Returns(feedIterator.Object);
+            })
+            .Create();
+
+        AccountRepository accountRepository = new(
+            logger.Object,
+            cosmosClient.Object);
+
+        // Act
+        Task<Account> res() => accountRepository.GetByEmailAddressAsync(emailAddress);
 
         // Assert
         await Assert.ThrowsExceptionAsync<AccountNotFoundException>(res);

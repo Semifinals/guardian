@@ -1,5 +1,4 @@
 ﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Semifinals.Guardian.Repositories;
 using Semifinals.Guardian.Services;
@@ -37,13 +36,16 @@ class Startup : FunctionsStartup
 
         // Setup repositories
         builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+        builder.Services.AddScoped<IClientRepository, ClientRepository>();
         builder.Services.AddScoped<IIdentityRepository, IdentityRepository>();
         builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
         builder.Services.AddScoped<IRecoveryCodeRepository, RecoveryCodeRepository>();
+        builder.Services.AddScoped<ITokenRepository, TokenRepository>();
 
         // Setup services
         builder.Services.AddScoped<IAssociationService, AssociationService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
         builder.Services.AddScoped<IRecoveryService, RecoveryService>();
+        builder.Services.AddScoped<ITokenService, TokenService>();
     }
 }
